@@ -25,15 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStartCamera = document.getElementById('btnStartCamera');
   const btnLaunchGuitar = document.getElementById('btnLaunchGuitar');
   const cameraBtnText = document.getElementById('cameraBtnText');
+  const cameraBtnIcon = document.getElementById('cameraBtnIcon');
   const cameraStatus = document.getElementById('cameraStatus');
-  const gestureStatus = document.getElementById('gestureStatus');
+  const cameraStatusText = document.getElementById('cameraStatusText');
   const detectedGestureName = document.getElementById('detectedGestureName');
+  const statusGestureIcon = document.getElementById('statusGestureIcon');
   const activeTuneName = document.getElementById('activeTuneName');
   const cameraHeroCard = document.getElementById('cameraHeroCard');
 
   // HUD Elements
   const hudGestureBanner = document.getElementById('hudGestureBanner');
-  const hudGestureEmoji = document.getElementById('hudGestureEmoji');
+  const hudGestureIcon = document.getElementById('hudGestureIcon');
   const hudGestureTitle = document.getElementById('hudGestureTitle');
   const hudTuneSubtitle = document.getElementById('hudTuneSubtitle');
   const hudToast = document.getElementById('hudToast');
@@ -49,6 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentTuneStyle = document.getElementById('currentTuneStyle');
   const tuneKeyDisplay = document.getElementById('tuneKeyDisplay');
   const gestureTuneList = document.getElementById('gestureTuneList');
+
+  // Panels & Navigation
+  const panelLeft = document.getElementById('panelLeft');
+  const panelRight = document.getElementById('panelRight');
+  const toggleLeftPanel = document.getElementById('toggleLeftPanel');
+  const toggleRightPanel = document.getElementById('toggleRightPanel');
+  const workstationGrid = document.getElementById('workstationGrid');
 
   // Modals
   const tutorialModal = document.getElementById('tutorialModal');
@@ -74,7 +83,26 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.height = rect.height || 720;
   }
   window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+  setTimeout(resizeCanvas, 100);
+
+  // Panel Toggle Navigation Handlers
+  if (toggleLeftPanel && panelLeft) {
+    toggleLeftPanel.addEventListener('click', () => {
+      panelLeft.classList.toggle('panel-collapsed');
+      toggleLeftPanel.classList.toggle('active');
+      workstationGrid.classList.toggle('left-collapsed', panelLeft.classList.contains('panel-collapsed'));
+      setTimeout(resizeCanvas, 220);
+    });
+  }
+
+  if (toggleRightPanel && panelRight) {
+    toggleRightPanel.addEventListener('click', () => {
+      panelRight.classList.toggle('panel-collapsed');
+      toggleRightPanel.classList.toggle('active');
+      workstationGrid.classList.toggle('right-collapsed', panelRight.classList.contains('panel-collapsed'));
+      setTimeout(resizeCanvas, 220);
+    });
+  }
 
   // =========================================================================
   // Initialize UI & Gesture Mapping List
@@ -99,8 +127,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       row.innerHTML = `
         <div class="gesture-row-top">
-          <div class="gesture-emoji-badge">${g.emoji}</div>
-          <span class="gesture-name">${g.name}</span>
+          <div class="gesture-icon-badge">
+            <i data-lucide="${g.icon || 'music'}"></i>
+          </div>
+          <div class="gesture-row-info">
+            <span class="gesture-name">${g.name}</span>
+            <span class="gesture-tag-pill">${g.tag || 'SYNTH'}</span>
+          </div>
         </div>
         <div class="gesture-row-bottom">
           <select class="gesture-tune-select" data-gesture-id="${g.id}">
@@ -127,6 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       gestureTuneList.appendChild(row);
     });
+
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
   }
 
   renderGestureList();
@@ -139,19 +176,19 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.init();
     audio.resume();
 
-    showToast("Starting AI Camera Tracking...");
+    showToast("Starting Vision Camera Tracking...");
     await tracker.init(video);
     const success = await tracker.startCamera();
 
     if (success) {
       state.cameraActive = true;
-      cameraBtnText.textContent = "Stop Camera";
-      btnStartCamera.classList.replace('btn-primary', 'btn-outline');
+      cameraBtnText.textContent = "Stop Vision";
+      btnStartCamera.classList.add('active');
       cameraHeroCard.style.opacity = '0';
       setTimeout(() => cameraHeroCard.style.display = 'none', 400);
       cameraStatus.classList.add('active');
-      cameraStatus.querySelector('.status-label').textContent = "Camera: Active";
-      showToast("Ready! Show any hand gesture to play tunes.");
+      cameraStatusText.textContent = "Vision: Active";
+      showToast("Ready! Show any hand gesture to synthesize tunes.");
     } else {
       showToast("Could not access camera. Please allow webcam permissions.");
     }
@@ -161,12 +198,12 @@ document.addEventListener('DOMContentLoaded', () => {
     tracker.stopCamera();
     audio.stopTune();
     state.cameraActive = false;
-    cameraBtnText.textContent = "Start Camera";
-    btnStartCamera.classList.replace('btn-outline', 'btn-primary');
+    cameraBtnText.textContent = "Start Vision";
+    btnStartCamera.classList.remove('active');
     cameraHeroCard.style.display = 'flex';
     setTimeout(() => cameraHeroCard.style.opacity = '1', 50);
     cameraStatus.classList.remove('active');
-    cameraStatus.querySelector('.status-label').textContent = "Camera: Stopped";
+    cameraStatusText.textContent = "Vision: Standby";
     resetActiveTuneUI();
   }
 
@@ -205,18 +242,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateActiveTuneUI(gestureId, tune) {
     const meta = window.AirGuitarTunes.GESTURE_METADATA.find(m => m.id === gestureId);
-    const emoji = meta ? meta.emoji : '🎸';
     const gestureName = meta ? meta.name : 'Custom Gesture';
+    const iconName = meta ? meta.icon : 'music';
 
-    detectedGestureName.textContent = `${emoji} ${gestureName}`;
+    detectedGestureName.textContent = gestureName;
+    if (statusGestureIcon) {
+      statusGestureIcon.setAttribute('data-lucide', iconName);
+    }
     activeTuneName.textContent = tune.title;
 
-    activeGestureIcon.textContent = emoji;
+    activeGestureIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
     currentTuneTitle.textContent = tune.title;
     currentTuneStyle.textContent = `${tune.genre} • ${tune.bpm} BPM`;
 
     // Highlight HUD Banner
-    hudGestureEmoji.textContent = emoji;
+    hudGestureIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
     hudGestureTitle.textContent = gestureName;
     hudTuneSubtitle.textContent = `Playing: ${tune.title}`;
     hudGestureBanner.classList.add('visible');
@@ -232,16 +272,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.gesture-tune-row').forEach(row => {
       row.classList.toggle('active', row.dataset.gestureId === gestureId);
     });
+
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
   }
 
   function resetActiveTuneUI() {
-    detectedGestureName.textContent = "None (Show Hand)";
+    detectedGestureName.textContent = "Show Hand";
+    if (statusGestureIcon) {
+      statusGestureIcon.setAttribute('data-lucide', 'hand');
+    }
     activeTuneName.textContent = "Idle";
-    activeGestureIcon.textContent = "🖐️";
+    activeGestureIcon.innerHTML = `<i data-lucide="music"></i>`;
     currentTuneTitle.textContent = "Ready to Play";
     currentTuneStyle.textContent = "Show a hand gesture to start a tune";
     hudGestureBanner.classList.remove('visible');
     document.querySelectorAll('.gesture-tune-row').forEach(row => row.classList.remove('active'));
+
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
   }
 
   // Tracker Callbacks
@@ -274,11 +325,11 @@ document.addEventListener('DOMContentLoaded', () => {
   audio.onNoteTrigger = (noteEvent) => {
     visualizer.triggerNoteVisual(noteEvent.string - 1, noteEvent.fret);
 
-    // Light up matching fret wire
-    const fretWire = document.querySelector(`.fret-wire[data-fret="${noteEvent.fret}"]`);
-    if (fretWire) {
-      fretWire.classList.add('active');
-      setTimeout(() => fretWire.classList.remove('active'), 120);
+    // Light up matching fret node in HUD
+    const fretNode = document.querySelector(`.fret-node[data-fret="${noteEvent.fret}"]`);
+    if (fretNode) {
+      fretNode.classList.add('active');
+      setTimeout(() => fretNode.classList.remove('active'), 140);
     }
   };
 
@@ -302,9 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
 
   // Guitar Tone Presets
-  document.querySelectorAll('.tone-chip, .pill-btn').forEach(btn => {
+  document.querySelectorAll('.tone-chip').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.tone-chip, .pill-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tone-chip').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       audio.setTonePreset(btn.dataset.preset);
     });
@@ -395,9 +446,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const bpmSlider = document.getElementById('bpmSlider');
   const bpmText = document.getElementById('bpmText');
 
-  document.querySelectorAll('.drum-chip, .genre-pill').forEach(pill => {
+  document.querySelectorAll('.drum-chip').forEach(pill => {
     pill.addEventListener('click', () => {
-      document.querySelectorAll('.drum-chip, .genre-pill').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.drum-chip').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       audio.drumGenre = pill.dataset.genre;
     });
@@ -405,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnToggleDrums.addEventListener('click', () => {
     const isPlaying = audio.toggleDrums();
-    drumText.textContent = isPlaying ? "Stop Drums" : "Play Backing Drums";
+    drumText.textContent = isPlaying ? "Stop Drums" : "Play Drums";
     drumIcon.setAttribute('data-lucide', isPlaying ? 'square' : 'play');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   });
@@ -441,11 +492,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Modals & Settings
   // =========================================================================
 
-  btnTutorial.addEventListener('click', () => tutorialModal.classList.add('open'));
+  btnTutorial.addEventListener('click', () => {
+    tutorialModal.classList.add('open');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
   closeTutorialBtn.addEventListener('click', () => tutorialModal.classList.remove('open'));
   btnGotIt.addEventListener('click', () => tutorialModal.classList.remove('open'));
 
-  btnSettings.addEventListener('click', () => settingsModal.classList.add('open'));
+  btnSettings.addEventListener('click', () => {
+    settingsModal.classList.add('open');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
   closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('open'));
   btnSaveSettings.addEventListener('click', () => settingsModal.classList.remove('open'));
 

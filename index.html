@@ -9,7 +9,7 @@
   <!-- Premium Modern Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Lucide Modern Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -32,7 +32,7 @@
       <div class="brand-headings">
         <div class="brand-title">
           <span>AIRGUITAR</span>
-          <span class="pro-badge">PRO AI</span>
+          <span class="pro-badge">STUDIO AI</span>
         </div>
         <span class="brand-sub">Spatial Vision Audio Synthesizer</span>
       </div>
@@ -42,23 +42,40 @@
     <div class="status-cluster">
       <div class="status-chip" id="cameraStatus">
         <span class="chip-dot"></span>
-        <span class="chip-text">Vision: Standby</span>
+        <span class="chip-text" id="cameraStatusText">Vision: Standby</span>
       </div>
       <div class="status-chip highlight" id="gestureStatus">
         <span class="chip-dot glow"></span>
-        <span class="chip-text">Gesture: <strong id="detectedGestureName">None (Show Hand)</strong></span>
+        <div class="chip-content" id="detectedGestureContent">
+          <i data-lucide="hand" id="statusGestureIcon"></i>
+          <span class="chip-text" id="detectedGestureName">Show Hand</span>
+        </div>
       </div>
       <div class="status-chip live-tune" id="tuneStatus">
         <div class="equalizer-bars" id="eqBars">
           <span></span><span></span><span></span><span></span>
         </div>
-        <span class="chip-text">Tune: <strong id="activeTuneName">Idle</strong></span>
+        <span class="chip-text">Sound: <strong id="activeTuneName">Idle</strong></span>
       </div>
     </div>
 
     <!-- Quick Navigation Actions -->
     <div class="header-actions">
-      <button class="nav-btn" id="btnTutorial" title="View Gesture Library">
+      <!-- Layout toggle buttons for easy navigation -->
+      <div class="panel-toggles-group">
+        <button class="nav-toggle-btn active" id="toggleLeftPanel" title="Toggle Gesture Deck (Left Panel)">
+          <i data-lucide="panel-left"></i>
+          <span>Gestures</span>
+        </button>
+        <button class="nav-toggle-btn active" id="toggleRightPanel" title="Toggle FX Rack (Right Panel)">
+          <i data-lucide="panel-right"></i>
+          <span>FX Rack</span>
+        </button>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <button class="nav-btn" id="btnTutorial" title="View Gesture Guide">
         <i data-lucide="book-open"></i>
         <span>Guide</span>
       </button>
@@ -67,16 +84,16 @@
         <span>Settings</span>
       </button>
       <button class="primary-launch-btn" id="btnStartCamera">
-        <i data-lucide="camera"></i>
-        <span id="cameraBtnText">Start Camera</span>
+        <i data-lucide="camera" id="cameraBtnIcon"></i>
+        <span id="cameraBtnText">Start Vision</span>
       </button>
     </div>
   </header>
 
   <!-- Studio Main Workstation -->
-  <main class="studio-workstation">
+  <main class="studio-workstation" id="workstationGrid">
     <!-- Left Panel: Gesture Mapping & Live Performance Deck -->
-    <aside class="studio-panel panel-left">
+    <aside class="studio-panel panel-left" id="panelLeft">
       <div class="panel-top-bar">
         <div class="panel-title-wrap">
           <i data-lucide="layout-grid" class="accent-icon"></i>
@@ -96,7 +113,9 @@
         </div>
         
         <div class="perf-body">
-          <div class="gesture-display-bubble" id="activeGestureIcon">🖐️</div>
+          <div class="gesture-display-bubble" id="activeGestureIcon">
+            <i data-lucide="music"></i>
+          </div>
           <div class="perf-text">
             <h4 id="currentTuneTitle">Ready for Gestures</h4>
             <p id="currentTuneStyle">Raise hand to trigger looping riffs</p>
@@ -136,7 +155,7 @@
       </div>
 
       <div class="gesture-deck-scroll" id="gestureTuneList">
-        <!-- Rendered via JavaScript -->
+        <!-- Rendered via JavaScript with clean vector icons -->
       </div>
     </aside>
 
@@ -153,7 +172,9 @@
         <div class="hud-glass-layer" id="hudLayer">
           <!-- Gesture Detection Floating Pill (Top Center) -->
           <div class="floating-gesture-pill" id="hudGestureBanner">
-            <span class="floating-emoji" id="hudGestureEmoji">🤘</span>
+            <div class="floating-icon-wrap" id="hudGestureIcon">
+              <i data-lucide="flame"></i>
+            </div>
             <div class="floating-meta">
               <span class="floating-title" id="hudGestureTitle">Rock Horns</span>
               <span class="floating-sub" id="hudTuneSubtitle">Heavy Rock Solo Riff</span>
@@ -163,7 +184,7 @@
           <!-- Bottom Holographic Fretboard -->
           <div class="floating-fret-hud" id="hudFretboard">
             <div class="fret-nut-label">
-              <i data-lucide="guitar"></i>
+              <i data-lucide="activity"></i>
               <span>VIRTUAL NECK</span>
             </div>
             <div class="fret-markers-row" id="fretPositions">
@@ -180,7 +201,7 @@
           <!-- Minimalist Toast -->
           <div class="floating-toast" id="hudToast">
             <i data-lucide="sparkles"></i>
-            <span id="hudToastMsg">Start camera and show any hand gesture to play continuous tunes!</span>
+            <span id="hudToastMsg">Start vision camera and show any hand gesture to synthesize guitar tunes.</span>
           </div>
         </div>
 
@@ -188,22 +209,59 @@
         <div class="hero-start-screen" id="cameraHeroCard">
           <div class="hero-content-box">
             <div class="hero-halo-icon">
-              <i data-lucide="guitar"></i>
+              <i data-lucide="zap"></i>
             </div>
-            <h2>AirGuitar AI</h2>
-            <p class="hero-tagline">Play continuous studio-grade guitar tunes in the air with real-time hand gestures and spatial point modulation.</p>
+            <h2>AirGuitar Studio AI</h2>
+            <p class="hero-tagline">Real-time spatial computer vision synthesizer. Play continuous guitar riffs in mid-air with clean gesture recognition and 3D modulation.</p>
             
-            <div class="gesture-quick-pills">
-              <div class="q-pill"><span class="q-emoji">🤘</span><span>Rock Horns = Rock Solo</span></div>
-              <div class="q-pill"><span class="q-emoji">✌️</span><span>Peace = Acoustic Fingerstyle</span></div>
-              <div class="q-pill"><span class="q-emoji">🖐️</span><span>Palm = Spanish Flamenco</span></div>
-              <div class="q-pill"><span class="q-emoji">☝️</span><span>Point = Blues Lead Lick</span></div>
-              <div class="q-pill"><span class="q-emoji">✊</span><span>Fist = Metal Chug</span></div>
+            <div class="gesture-quick-grid">
+              <div class="q-card">
+                <div class="q-card-icon"><i data-lucide="flame"></i></div>
+                <div class="q-card-info">
+                  <strong>Rock Horns</strong>
+                  <span>Heavy Rock Solo Riff</span>
+                </div>
+              </div>
+              <div class="q-card">
+                <div class="q-card-icon"><i data-lucide="music"></i></div>
+                <div class="q-card-info">
+                  <strong>Peace Sign</strong>
+                  <span>Acoustic Fingerstyle</span>
+                </div>
+              </div>
+              <div class="q-card">
+                <div class="q-card-icon"><i data-lucide="sparkles"></i></div>
+                <div class="q-card-info">
+                  <strong>Open Palm</strong>
+                  <span>Spanish Flamenco Run</span>
+                </div>
+              </div>
+              <div class="q-card">
+                <div class="q-card-icon"><i data-lucide="zap"></i></div>
+                <div class="q-card-info">
+                  <strong>Index Point</strong>
+                  <span>Soulful Blues Lick</span>
+                </div>
+              </div>
+              <div class="q-card">
+                <div class="q-card-icon"><i data-lucide="shield-alert"></i></div>
+                <div class="q-card-info">
+                  <strong>Closed Fist</strong>
+                  <span>Metal Power Chug</span>
+                </div>
+              </div>
+              <div class="q-card">
+                <div class="q-card-icon"><i data-lucide="disc-3"></i></div>
+                <div class="q-card-info">
+                  <strong>Thumbs Up</strong>
+                  <span>Funky Clean Groove</span>
+                </div>
+              </div>
             </div>
 
             <button class="hero-cta-button" id="btnLaunchGuitar">
               <i data-lucide="play-circle"></i>
-              <span>Launch Air Guitar</span>
+              <span>Launch Studio Experience</span>
             </button>
           </div>
         </div>
@@ -212,23 +270,42 @@
       <!-- Bottom Sound Ribbon & Tone Bar -->
       <div class="stage-bottom-bar">
         <div class="tone-bar-left">
-          <span class="bar-label"><i data-lucide="disc-3"></i> TONE PRESET:</span>
+          <span class="bar-label"><i data-lucide="sliders-horizontal"></i> TONE PRESET</span>
           <div class="tone-pill-selector" id="tonePresets">
-            <button class="tone-chip active" data-preset="rock-overdrive">⚡ Overdrive</button>
-            <button class="tone-chip" data-preset="acoustic-steel">🎸 Acoustic</button>
-            <button class="tone-chip" data-preset="heavy-distortion">🔥 Distortion</button>
-            <button class="tone-chip" data-preset="nylon-classical">✨ Spanish Nylon</button>
-            <button class="tone-chip" data-preset="synth-guitar">🌌 Synth Guitar</button>
-            <button class="tone-chip" data-preset="clean-chorus">🌊 Clean Chorus</button>
+            <button class="tone-chip active" data-preset="rock-overdrive">
+              <span class="tone-dot amber"></span>
+              <span>Overdrive</span>
+            </button>
+            <button class="tone-chip" data-preset="acoustic-steel">
+              <span class="tone-dot emerald"></span>
+              <span>Acoustic Steel</span>
+            </button>
+            <button class="tone-chip" data-preset="heavy-distortion">
+              <span class="tone-dot red"></span>
+              <span>Distortion</span>
+            </button>
+            <button class="tone-chip" data-preset="nylon-classical">
+              <span class="tone-dot violet"></span>
+              <span>Spanish Nylon</span>
+            </button>
+            <button class="tone-chip" data-preset="synth-guitar">
+              <span class="tone-dot cyan"></span>
+              <span>Synth Lead</span>
+            </button>
+            <button class="tone-chip" data-preset="clean-chorus">
+              <span class="tone-dot sky"></span>
+              <span>Clean Chorus</span>
+            </button>
           </div>
         </div>
 
         <div class="tone-bar-right">
-          <button class="btn-stop-tune" id="btnStopTune" title="Stop Current Tune">
+          <button class="btn-stop-tune" id="btnStopTune" title="Stop Current Sound">
             <i data-lucide="square"></i>
+            <span>Stop</span>
           </button>
           <div class="volume-dial-container">
-            <button class="btn-volume-mute" id="btnMuteToggle" title="Mute/Unmute">
+            <button class="btn-volume-mute" id="btnMuteToggle" title="Mute/Unmute Master">
               <i data-lucide="volume-2" id="muteIcon"></i>
             </button>
             <input type="range" class="modern-slider" id="masterVolSlider" min="0" max="1" step="0.01" value="0.85">
@@ -239,7 +316,7 @@
     </section>
 
     <!-- Right Panel: Studio Audio FX, Waves & Backing Drums -->
-    <aside class="studio-panel panel-right">
+    <aside class="studio-panel panel-right" id="panelRight">
       <!-- Oscilloscope & Realtime Spectrum -->
       <div class="panel-card-unit">
         <div class="unit-header">
@@ -259,7 +336,7 @@
         <div class="unit-header">
           <div class="unit-title">
             <i data-lucide="sliders-horizontal"></i>
-            <span>FX PEDALBOARD</span>
+            <span>FX RACKBOARD</span>
           </div>
         </div>
 
@@ -409,24 +486,72 @@
         <div class="tutorial-card-row">
           <div class="step-badge">1</div>
           <div class="step-text">
-            <h4>Start Camera & Hold Up Hand</h4>
-            <p>Position your hand in front of your webcam. Ensure your fingers and hand points are clearly visible.</p>
+            <h4>Start Vision Camera</h4>
+            <p>Position your hand within your camera's field of view. Keep your hand facing forward for accurate finger recognition.</p>
           </div>
         </div>
 
         <div class="tutorial-card-row">
           <div class="step-badge">2</div>
           <div class="step-text">
-            <h4>Show Any Hand Gesture to Play a Continuous Riff</h4>
+            <h4>Show Any Hand Gesture to Synthesize Riffs</h4>
             <div class="guide-gestures-grid">
-              <div class="g-card"><strong>🤘 Rock Horns</strong> <span>Heavy Rock Solo Riff</span></div>
-              <div class="g-card"><strong>✌️ Peace Sign</strong> <span>Acoustic Fingerpicking Ballad</span></div>
-              <div class="g-card"><strong>🖐️ Open Palm</strong> <span>Spanish Flamenco Run</span></div>
-              <div class="g-card"><strong>☝️ 1 Finger</strong> <span>Soulful Blues Lead Lick</span></div>
-              <div class="g-card"><strong>✊ Fist</strong> <span>Metal Power Chug</span></div>
-              <div class="g-card"><strong>👍 Thumbs Up</strong> <span>Funky Clean Groove</span></div>
-              <div class="g-card"><strong>👌 Pinch</strong> <span>Ambient Dream Swell</span></div>
-              <div class="g-card"><strong>🤙 Shaka</strong> <span>Surf Rock Tremolo</span></div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="flame"></i></div>
+                <div class="g-card-body">
+                  <strong>Rock Horns</strong>
+                  <span>Heavy Rock Solo Riff</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="music"></i></div>
+                <div class="g-card-body">
+                  <strong>Peace Sign</strong>
+                  <span>Acoustic Fingerstyle Ballad</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="sparkles"></i></div>
+                <div class="g-card-body">
+                  <strong>Open Palm</strong>
+                  <span>Spanish Flamenco Run</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="zap"></i></div>
+                <div class="g-card-body">
+                  <strong>Index Point</strong>
+                  <span>Soulful Blues Lead Lick</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="shield-alert"></i></div>
+                <div class="g-card-body">
+                  <strong>Closed Fist</strong>
+                  <span>Metal Power Chug</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="disc-3"></i></div>
+                <div class="g-card-body">
+                  <strong>Thumbs Up</strong>
+                  <span>Funky Clean Groove</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="radio"></i></div>
+                <div class="g-card-body">
+                  <strong>Pinch Grip</strong>
+                  <span>Ambient Dream Swell</span>
+                </div>
+              </div>
+              <div class="g-card">
+                <div class="g-card-icon"><i data-lucide="waves"></i></div>
+                <div class="g-card-body">
+                  <strong>Shaka Sign</strong>
+                  <span>Surf Rock Tremolo</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -435,7 +560,7 @@
           <div class="step-badge">3</div>
           <div class="step-text">
             <h4>Move Hand in Space for Realtime Modulation</h4>
-            <p>Move your hand <strong>Left ↔ Right</strong> to transpose pitch/key up and down the neck. Move <strong>Up ↕ Down</strong> to sweep the wah-wah filter!</p>
+            <p>Move your hand <strong>Left ↔ Right</strong> to transpose pitch and key signatures. Move <strong>Up ↕ Down</strong> to sweep the wah-wah resonance filter.</p>
           </div>
         </div>
       </div>
@@ -466,7 +591,7 @@
         <div class="setting-row">
           <div class="setting-info">
             <label>Tracking Smoothing Filter</label>
-            <span>Filters webcam motion jitter</span>
+            <span>Exponential moving average smoothing</span>
           </div>
           <input type="range" class="modern-slider" id="setSmoothing" min="0.1" max="0.9" step="0.05" value="0.6">
         </div>

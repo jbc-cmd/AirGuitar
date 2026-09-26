@@ -12,16 +12,15 @@ const NOTE_FREQS = {
 };
 
 const GUITAR_TUNES = {
-  // 1. Rock Horns -> Heavy Rock Solo Riff
+  // 1. Rock Solo
   'rock_solo': {
     id: 'rock_solo',
     title: 'Heavy Rock Solo Riff',
-    emoji: '🤘',
+    icon: 'flame',
     genre: 'Rock / Metal',
     bpm: 120,
     preferredTone: 'rock-overdrive',
     description: 'High-voltage electric guitar riff with punchy power notes & bending lead runs.',
-    // 16-step or 32-step rhythmic loop
     pattern: [
       { step: 0, note: 'E3', dur: 2, vel: 0.9, fret: 0, string: 5 },
       { step: 2, note: 'E3', dur: 2, vel: 0.85, fret: 0, string: 5 },
@@ -41,17 +40,16 @@ const GUITAR_TUNES = {
     totalSteps: 32
   },
 
-  // 2. Peace Sign -> Acoustic Fingerpicking Ballad
+  // 2. Acoustic Fingerstyle Ballad
   'acoustic_ballad': {
     id: 'acoustic_ballad',
     title: 'Acoustic Fingerstyle Ballad',
-    emoji: '✌️',
+    icon: 'music',
     genre: 'Acoustic / Folk',
     bpm: 104,
     preferredTone: 'acoustic-steel',
     description: 'Smooth, intricate acoustic fingerpicking arpeggios flowing through Em - G - C - D.',
     pattern: [
-      // Bar 1: Em
       { step: 0, note: 'E2', dur: 4, vel: 0.9, fret: 0, string: 6 },
       { step: 2, note: 'B3', dur: 2, vel: 0.7, fret: 0, string: 2 },
       { step: 4, note: 'G3', dur: 2, vel: 0.75, fret: 0, string: 3 },
@@ -60,7 +58,6 @@ const GUITAR_TUNES = {
       { step: 10, note: 'G3', dur: 2, vel: 0.7, fret: 0, string: 3 },
       { step: 12, note: 'E3', dur: 2, vel: 0.8, fret: 2, string: 4 },
       { step: 14, note: 'B3', dur: 2, vel: 0.7, fret: 0, string: 2 },
-      // Bar 2: G
       { step: 16, note: 'G2', dur: 4, vel: 0.9, fret: 3, string: 6 },
       { step: 18, note: 'B3', dur: 2, vel: 0.7, fret: 0, string: 2 },
       { step: 20, note: 'D4', dur: 2, vel: 0.75, fret: 0, string: 4 },
@@ -73,11 +70,11 @@ const GUITAR_TUNES = {
     totalSteps: 32
   },
 
-  // 3. Open Palm -> Spanish Classical Flamenco
+  // 3. Spanish Classical Flamenco
   'spanish_flamenco': {
     id: 'spanish_flamenco',
     title: 'Spanish Flamenco Run',
-    emoji: '🖐️',
+    icon: 'sparkles',
     genre: 'Flamenco / Classical',
     bpm: 128,
     preferredTone: 'nylon-classical',
@@ -100,11 +97,11 @@ const GUITAR_TUNES = {
     totalSteps: 32
   },
 
-  // 4. Pointing Finger -> Blues Lead Solo Lick
+  // 4. Blues Lead Solo Lick
   'blues_solo': {
     id: 'blues_solo',
     title: 'Soulful Blues Lead Lick',
-    emoji: '☝️',
+    icon: 'zap',
     genre: 'Blues',
     bpm: 96,
     preferredTone: 'rock-overdrive',
@@ -125,11 +122,11 @@ const GUITAR_TUNES = {
     totalSteps: 32
   },
 
-  // 5. Fist -> Metal Power Chug
+  // 5. Metal Power Chug
   'metal_chug': {
     id: 'metal_chug',
     title: 'Metal Power Chug',
-    emoji: '✊',
+    icon: 'shield-alert',
     genre: 'Heavy Metal',
     bpm: 140,
     preferredTone: 'heavy-distortion',
@@ -154,11 +151,11 @@ const GUITAR_TUNES = {
     totalSteps: 24
   },
 
-  // 6. Thumbs Up -> Funky Clean 16ths
+  // 6. Funky Clean Groove
   'funk_groove': {
     id: 'funk_groove',
     title: 'Funky Clean Groove',
-    emoji: '👍',
+    icon: 'disc-3',
     genre: 'Funk / R&B',
     bpm: 112,
     preferredTone: 'clean-chorus',
@@ -177,11 +174,11 @@ const GUITAR_TUNES = {
     totalSteps: 16
   },
 
-  // 7. Pinch -> Ambient Chillwave Swell
+  // 7. Ambient Chillwave Swell
   'ambient_swell': {
     id: 'ambient_swell',
     title: 'Ambient Dream Swell',
-    emoji: '👌',
+    icon: 'radio',
     genre: 'Ambient / Lo-Fi',
     bpm: 80,
     preferredTone: 'synth-guitar',
@@ -201,11 +198,11 @@ const GUITAR_TUNES = {
     totalSteps: 32
   },
 
-  // 8. Shaka -> Surf Rock Tremolo
+  // 8. Surf Rock Tremolo
   'surf_tremolo': {
     id: 'surf_tremolo',
     title: 'Surf Rock Tremolo',
-    emoji: '🤙',
+    icon: 'waves',
     genre: 'Surf Rock',
     bpm: 135,
     preferredTone: 'rock-overdrive',
@@ -241,14 +238,14 @@ const DEFAULT_GESTURE_MAPPING = {
 };
 
 const GESTURE_METADATA = [
-  { id: 'rock', name: 'Rock Horns', emoji: '🤘', defaultTune: 'rock_solo' },
-  { id: 'peace', name: 'Peace Sign (2 Fingers)', emoji: '✌️', defaultTune: 'acoustic_ballad' },
-  { id: 'palm', name: 'Open Palm', emoji: '🖐️', defaultTune: 'spanish_flamenco' },
-  { id: 'point', name: 'Pointing (1 Finger)', emoji: '☝️', defaultTune: 'blues_solo' },
-  { id: 'fist', name: 'Fist', emoji: '✊', defaultTune: 'metal_chug' },
-  { id: 'thumbs_up', name: 'Thumbs Up', emoji: '👍', defaultTune: 'funk_groove' },
-  { id: 'pinch', name: 'Pinch (OK Sign)', emoji: '👌', defaultTune: 'ambient_swell' },
-  { id: 'shaka', name: 'Shaka Sign', emoji: '🤙', defaultTune: 'surf_tremolo' }
+  { id: 'rock', name: 'Rock Horns', icon: 'flame', tag: 'SOLO RIFF', defaultTune: 'rock_solo' },
+  { id: 'peace', name: 'Peace Sign (2 Fingers)', icon: 'music', tag: 'FINGERSTYLE', defaultTune: 'acoustic_ballad' },
+  { id: 'palm', name: 'Open Palm', icon: 'sparkles', tag: 'FLAMENCO', defaultTune: 'spanish_flamenco' },
+  { id: 'point', name: 'Index Point (1 Finger)', icon: 'zap', tag: 'BLUES LEAD', defaultTune: 'blues_solo' },
+  { id: 'fist', name: 'Closed Fist', icon: 'shield-alert', tag: 'POWER CHUG', defaultTune: 'metal_chug' },
+  { id: 'thumbs_up', name: 'Thumbs Up', icon: 'disc-3', tag: 'FUNK GROOVE', defaultTune: 'funk_groove' },
+  { id: 'pinch', name: 'Pinch (OK Grip)', icon: 'radio', tag: 'AMBIENT SWELL', defaultTune: 'ambient_swell' },
+  { id: 'shaka', name: 'Shaka Sign', icon: 'waves', tag: 'SURF TREMOLO', defaultTune: 'surf_tremolo' }
 ];
 
 window.AirGuitarTunes = {
