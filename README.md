@@ -1,8 +1,6 @@
-# 🎸 AirGuitar AI — Vision-Powered Gesture Virtual Instrument
+# 🎸 AirGuitar AI — Vision-Powered Gesture Virtual Instrument & Studio
 
-(just chillin)
-
-An interactive, browser-based virtual air guitar powered by real-time computer vision AI (MediaPipe Hands) and Web Audio API physical string synthesis. Make hand gestures in the air to trigger and continuously loop studio-grade guitar riffs, solos, arpeggios, and grooves while modulating pitch and wah-wah filter in 3D/2D space!
+An interactive, ultra-modern virtual air guitar and digital audio workstation powered by real-time computer vision AI (MediaPipe Hands) and Web Audio API physical string synthesis. Make hand gestures in the air to trigger and continuously loop studio-grade guitar riffs, solos, arpeggios, and grooves while modulating pitch and wah-wah filter in 3D/2D space, or interact directly via canvas strumming and studio keyboard hotkeys!
 
 ---
 
@@ -10,15 +8,28 @@ An interactive, browser-based virtual air guitar powered by real-time computer v
 
 - **Real-Time AI Hand Tracking:** 21-landmark 3D hand tracking powered by Google MediaPipe Hands with smooth exponential moving average (EMA) jitter filtering.
 - **Continuous Gesture-to-Tune Engine:** Holding up specific hand gestures triggers and seamlessly loops authentic guitar riffs, fingerstyle ballads, flamenco runs, blues solos, and heavy metal chugs.
-- **Spatial Point Modulation:**
-  - **Hand X-Axis (Left ↔ Right):** Transposes pitch across the virtual neck (-6 to +7 semitones).
-  - **Hand Y-Axis (Up ↕ Down):** Sweeps the resonant Wah-Wah / Brightness filter (350 Hz to 7.5 kHz).
-- **Physical String Synthesis & FX Pedalboard:**
-  - Pluck transient generator with multiple oscillator waveforms.
+- **Studio Lossless WAV Audio Recorder:**
+  - 1-Click live recording with pulsing LED indicator, live timecode duration, pause/resume, instant audio player preview, and uncompressed 16-bit PCM `.wav` download.
+- **4 Luxury Visual Aesthetic Themes:**
+  - ⚡ **Cyber Synthwave** (Electric Cyan, Neon Pink, Holographic purple grids)
+  - 👑 **Obsidian Gold** (Deep Charcoal, Luxury Champagne Gold, Amber sparks)
+  - 🧪 **Matrix Emerald** (Futuristic Terminal Green, Lime neon sparks)
+  - 🌅 **Solar Sunset** (Sunburst Violet, Peach Coral, Retro gradient)
+- **4 Switchable Visualizer FX Modes:**
+  - **Laser Strings:** Dynamic laser strings with harmonic sine waves, fret indicators, and spark bursts.
+  - **Cyber Orbit:** Radial circular audio spectrum rotating and pulsating around the hand target reticle.
+  - **3D Grid:** Perspective holographic wireframe horizon reacting to guitar pitch.
+  - **Nebula Particles:** Fluid cosmic particle ribbon trailing finger landmarks.
+- **Direct Interactive String Plucking & Keyboard Studio Mode:**
+  - Click or drag across canvas strings for direct plucking with physical transient synthesis.
+  - Full keyboard shortcuts (`1-6` strings, `Q-W-E-R` chords, `A-K` gesture riffs, `Space` power chug).
+- **Studio 3-Band Equalizer & FX Pedalboard:**
+  - Low (250Hz), Mid (1.5kHz), High (4.5kHz) EQ sliders with presets (*Rock Scoop*, *Warm Acoustic*, *Bright Lead*, *Heavy Punch*, *Flat*).
   - Multi-guitar tones: *Rock Overdrive*, *Acoustic Steel*, *Heavy Distortion*, *Spanish Nylon*, *80s Neon Synth Guitar*, and *Clean Chorus*.
-  - Full FX rack: Overdrive/Distortion waveshaper, 3-Band Tone EQ, Stereo Convolver Reverb, Feedback Delay/Echo, and Analog Chorus.
-- **Synthesized Backing Drum Machine:** Built-in rhythm section supporting *Rock 4/4*, *Blues Shuffle*, *Metal 150*, *Acoustic Pop*, and *Funk Beat* with adjustable BPM.
-- **High-Definition Visualizer:** Real-time mirrored camera stage, glowing hand skeleton & target reticle, vibrating holographic strings, particle spark explosions, interactive fret markers, and 24-bit oscilloscope.
+  - Full FX rack: Overdrive waveshaper, Convolver Reverb, Feedback Delay/Echo, and Analog Chorus.
+- **Synthesized Backing Drum Machine & Tap Tempo:**
+  - Built-in rhythm section (*Rock 4/4*, *Blues Shuffle*, *Metal 150*, *Acoustic Pop*, *Funk Beat*) with interactive **TAP Tempo** button and visual beat pulse beacon.
+- **Instant Audition Riff Previews:** Click the play icon on any gesture row to audition tunes on demand.
 
 ---
 
@@ -39,6 +50,19 @@ An interactive, browser-based virtual air guitar powered by real-time computer v
 
 ---
 
+## ⌨️ Studio Keyboard Shortcuts
+
+| Key(s) | Action |
+| :--- | :--- |
+| `1` - `6` | Pluck individual strings (High E to Low E) |
+| `Q`, `W`, `E`, `R` | Strum Chords (Em, G, C, D) |
+| `A`, `S`, `D`, `F` | Trigger Rock Horns, Peace Sign, Open Palm, Blues Lick |
+| `G`, `H`, `J`, `K` | Trigger Metal Chug, Funk Groove, Ambient Swell, Surf Tremolo |
+| `Space` | Heavy Metal Power Chord Chug |
+| `M` / `D` | Toggle Mute / Toggle Backing Drums |
+
+---
+
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
@@ -55,20 +79,20 @@ You can serve the static files with any local HTTP server:
 python -m http.server 3000
 ```
 
-**Using Node.js (npx serve / live-server):**
+**Using Node.js (npx serve):**
 ```bash
 npx serve .
 ```
 
 ### 3. Open in Browser
-Visit **[http://localhost:3000](http://localhost:3000)** in Chrome, Edge, Firefox, or Brave. Click **"Start Camera"**, allow webcam permissions, and start rocking!
+Visit **[http://localhost:3000](http://localhost:3000)** in Chrome, Edge, Firefox, or Brave. Click **"Start Vision"** or **"Play with Keyboard / Mouse"** and start rocking!
 
 ---
 
 ## 🛠️ Technology Stack
 
 - **Computer Vision / AI:** MediaPipe Hands (@mediapipe/camera_utils, @mediapipe/hands)
-- **Audio Engine:** Web Audio API (Physical string synthesis, Convolver, BiquadFilters, WaveShaper, DynamicsCompressor)
+- **Audio Engine:** Web Audio API (Physical string synthesis, Convolver, BiquadFilters, WaveShaper, DynamicsCompressor, Lossless 16-bit PCM WAV encoder)
 - **Visuals & Rendering:** HTML5 Canvas, Vanilla CSS Glassmorphism, Lucide Icons, Plus Jakarta Sans & JetBrains Mono typography
 
 ---

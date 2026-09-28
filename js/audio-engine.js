@@ -58,8 +58,24 @@ class AirGuitarAudioEngine {
     this.scheduleAheadTime = 0.1; // 100ms
     this.schedulerTimer = null;
 
+    // Direct Plucking Tuning Table (Standard Guitar Tuning 1-6)
+    this.openStringFreqs = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41]; // High E to Low E
+
+    // Studio Audio Recording Engine
+    this.isRecording = false;
+    this.recordingPaused = false;
+    this.recordingStartTime = 0;
+    this.recordedChunks = [];
+    this.recordStreamDest = null;
+    this.mediaRecorder = null;
+    this.recordNode = null;
+    this.recordedLeftBuffers = [];
+    this.recordedRightBuffers = [];
+    this.recordingSampleCount = 0;
+
     // Callback when a note is triggered (for UI / fret visualizer)
     this.onNoteTrigger = null;
+    this.onRecordTimeUpdate = null;
   }
 
   init() {
@@ -97,6 +113,9 @@ class AirGuitarAudioEngine {
     this.masterLimiter.connect(this.masterGain);
     this.masterGain.connect(this.analyser);
     this.analyser.connect(this.ctx.destination);
+
+    // Setup Recording Tap from Analyser
+    this.setupRecorder();
 
     this.isInitialized = true;
     console.log("AirGuitar Audio Engine initialized successfully.");
@@ -668,6 +687,235 @@ class AirGuitarAudioEngine {
       clearInterval(this.drumTimer);
       const intervalMs = ((60 / this.drumBpm) / 4) * 1000;
       this.drumTimer = setInterval(() => this.stepDrumBeat(), intervalMs);
+    }
+  }
+
+  // =========================================================================
+  // Interactive Direct Plucking & Strumming API
+  // =========================================================================
+
+  pluckString(stringIndex = 0, fret = 0, velocity = 0.9) {
+    if (!this.isInitialized) this.init();
+    this.resume();
+
+    const sIdx = Math.max(0, Math.min(5, stringIndex));
+    const baseFreq = this.openStringFreqs[sIdx];
+    // Frequency calculation with fret and current transpose
+    const fretRatio = Math.pow(2, fret / 12);
+    const freq = baseFreq * fretRatio;
+
+    const time = this.ctx.currentTime;
+    const duration = 2.0;
+    this.triggerGuitarNote(freq, duration, velocity, { string: sIdx + 1, fret: fret });
+
+    if (this.onNoteTrigger) {
+      this.onNoteTrigger({ string: sIdx + 1, fret: fret, velocity: velocity });
+    }
+  }
+
+  strumChord(chordType = 'Em', velocity = 0.85) {
+    if (!this.isInitialized) this.init();
+    this.resume();
+
+    const chords = {
+      'Em': [ { s: 5, f: 0 }, { s: 4, f: 2 }, { s: 3, f: 2 }, { s: 2, f: 0 }, { s: 1, f: 0 }, { s: 0, f: 0 } ],
+      'G':  [ { s: 5, f: 3 }, { s: 4, f: 2 }, { s: 3, f: 0 }, { s: 2, f: 0 }, { s: 1, f: 3 }, { s: 0, f: 3 } ],
+      'C':  [ { s: 4, f: 3 }, { s: 3, f: 2 }, { s: 2, f: 0 }, { s: 1, f: 1 }, { s: 0, f: 0 } ],
+      'D':  [ { s: 3, f: 0 }, { s: 2, f: 2 }, { s: 1, f: 3 }, { s: 0, f: 2 } ],
+      'Am': [ { s: 4, f: 0 }, { s: 3, f: 2 }, { s: 2, f: 2 }, { s: 1, f: 1 }, { s: 0, f: 0 } ],
+      'E5': [ { s: 5, f: 0 }, { s: 4, f: 2 }, { s: 3, f: 2 } ]
+    };
+
+    const notes = chords[chordType] || chords['Em'];
+    notes.forEach((item, idx) => {
+      setTimeout(() => {
+        this.pluckString(item.s, item.f, velocity * (0.85 + Math.random() * 0.2));
+      }, idx * 25); // 25ms pick sweep delay
+    });
+  }
+
+  // =========================================================================
+  // 3-Band Equalizer Controls
+  // =========================================================================
+
+  setEqLow(gainDb) {
+    if (this.toneLow && this.ctx) {
+      this.toneLow.gain.setTargetAtTime(gainDb, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  setEqMid(gainDb) {
+    if (this.toneMid && this.ctx) {
+      this.toneMid.gain.setTargetAtTime(gainDb, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  setEqHigh(gainDb) {
+    if (this.toneHigh && this.ctx) {
+      this.toneHigh.gain.setTargetAtTime(gainDb, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  setEqPreset(name) {
+    const presets = {
+      'flat': { low: 0, mid: 0, high: 0 },
+      'rock-scoop': { low: 4.5, mid: -3.5, high: 3.5 },
+      'warm-acoustic': { low: 2.0, mid: 1.0, high: -2.0 },
+      'bright-lead': { low: -1.0, mid: 3.0, high: 5.0 },
+      'heavy-punch': { low: 6.0, mid: 1.0, high: 2.0 }
+    };
+    const p = presets[name] || presets['flat'];
+    this.setEqLow(p.low);
+    this.setEqMid(p.mid);
+    this.setEqHigh(p.high);
+    return p;
+  }
+
+  // =========================================================================
+  // Studio Lossless WAV Audio Recorder
+  // =========================================================================
+
+  setupRecorder() {
+    if (!this.ctx) return;
+
+    // Use ScriptProcessor / AudioNode tap for sample-accurate 16-bit WAV capture
+    const bufferSize = 4096;
+    if (this.ctx.createScriptProcessor) {
+      this.recordNode = this.ctx.createScriptProcessor(bufferSize, 2, 2);
+    } else {
+      return;
+    }
+
+    this.recordNode.onaudioprocess = (e) => {
+      if (!this.isRecording || this.recordingPaused) return;
+
+      const left = e.inputBuffer.getChannelData(0);
+      const right = e.inputBuffer.getChannelData(1);
+
+      this.recordedLeftBuffers.push(new Float32Array(left));
+      this.recordedRightBuffers.push(new Float32Array(right));
+      this.recordingSampleCount += left.length;
+
+      if (this.onRecordTimeUpdate) {
+        const elapsedSec = this.recordingSampleCount / this.ctx.sampleRate;
+        this.onRecordTimeUpdate(elapsedSec);
+      }
+    };
+
+    // Tap master output into record node
+    this.analyser.connect(this.recordNode);
+    this.recordNode.connect(this.ctx.destination);
+  }
+
+  startRecording() {
+    if (!this.isInitialized) this.init();
+    this.resume();
+
+    this.recordedLeftBuffers = [];
+    this.recordedRightBuffers = [];
+    this.recordingSampleCount = 0;
+    this.isRecording = true;
+    this.recordingPaused = false;
+    this.recordingStartTime = performance.now();
+    return true;
+  }
+
+  pauseRecording() {
+    if (!this.isRecording) return false;
+    this.recordingPaused = !this.recordingPaused;
+    return this.recordingPaused;
+  }
+
+  stopRecording() {
+    if (!this.isRecording) return null;
+    this.isRecording = false;
+    this.recordingPaused = false;
+
+    return this.exportWavBlob();
+  }
+
+  exportWavBlob() {
+    if (this.recordingSampleCount === 0) return null;
+
+    const sampleRate = this.ctx.sampleRate;
+    const numChannels = 2;
+    const totalLength = this.recordingSampleCount;
+
+    // Merge Float32 arrays
+    const leftFlat = new Float32Array(totalLength);
+    const rightFlat = new Float32Array(totalLength);
+    let offset = 0;
+
+    for (let i = 0; i < this.recordedLeftBuffers.length; i++) {
+      leftFlat.set(this.recordedLeftBuffers[i], offset);
+      rightFlat.set(this.recordedRightBuffers[i], offset);
+      offset += this.recordedLeftBuffers[i].length;
+    }
+
+    // Interleave channels & encode 16-bit PCM WAV
+    const wavBuffer = this.encodeWav([leftFlat, rightFlat], sampleRate);
+    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+
+    return {
+      blob,
+      url,
+      duration: totalLength / sampleRate,
+      sampleRate
+    };
+  }
+
+  encodeWav(channelBuffers, sampleRate) {
+    const numChannels = channelBuffers.length;
+    const length = channelBuffers[0].length;
+    const bitsPerSample = 16;
+    const bytesPerSample = bitsPerSample / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = length * blockAlign;
+    const headerSize = 44;
+    const totalSize = headerSize + dataSize;
+
+    const buffer = new ArrayBuffer(totalSize);
+    const view = new DataView(buffer);
+
+    // RIFF chunk descriptor
+    this.writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    this.writeString(view, 8, 'WAVE');
+
+    // fmt sub-chunk
+    this.writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+    view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+
+    // data sub-chunk
+    this.writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // Write PCM 16-bit samples
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      for (let ch = 0; ch < numChannels; ch++) {
+        let sample = Math.max(-1, Math.min(1, channelBuffers[ch][i]));
+        // Convert to 16-bit integer (-32768 to 32767)
+        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, sample, true);
+        offset += 2;
+      }
+    }
+
+    return buffer;
+  }
+
+  writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
     }
   }
 }

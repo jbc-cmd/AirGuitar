@@ -1,6 +1,7 @@
 /**
- * AirGuitar AI — Main Application Orchestrator
- * Integrates Audio Engine, Hand Tracking, Visualizer, Gesture Mapping & User Interface.
+ * AirGuitar AI — Main Studio Orchestrator
+ * Integrates Audio Engine, Hand Tracking, Visualizer Modes, Theme Engine,
+ * Live WAV Recorder, Interactive Canvas Strumming, 3-Band EQ & Keyboard Studio Mode.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,8 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
     gestureMapping: { ...window.AirGuitarTunes.DEFAULT_GESTURE_MAPPING },
     activeGesture: 'none',
     activeTuneId: null,
-    isMuted: false
+    isMuted: false,
+    currentTheme: localStorage.getItem('airguitar_theme') || 'cyber-synthwave'
   };
+
+  // Set stored theme
+  document.body.setAttribute('data-theme', state.currentTheme);
+  const themeSelect = document.getElementById('themeSelect');
+  if (themeSelect) themeSelect.value = state.currentTheme;
 
   // DOM Elements
   const video = document.getElementById('webcamVideo');
@@ -24,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const scopeCanvas = document.getElementById('audioVisualizerCanvas');
   const btnStartCamera = document.getElementById('btnStartCamera');
   const btnLaunchGuitar = document.getElementById('btnLaunchGuitar');
+  const btnLaunchKeyboard = document.getElementById('btnLaunchKeyboard');
   const cameraBtnText = document.getElementById('cameraBtnText');
   const cameraBtnIcon = document.getElementById('cameraBtnIcon');
   const cameraStatus = document.getElementById('cameraStatus');
@@ -32,6 +40,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusGestureIcon = document.getElementById('statusGestureIcon');
   const activeTuneName = document.getElementById('activeTuneName');
   const cameraHeroCard = document.getElementById('cameraHeroCard');
+
+  // Recorder Elements
+  const btnRecord = document.getElementById('btnRecord');
+  const recordLed = document.getElementById('recordLed');
+  const recordBtnText = document.getElementById('recordBtnText');
+  const recordTimer = document.getElementById('recordTimer');
+  const btnPauseRecord = document.getElementById('btnPauseRecord');
+  const btnStopRecord = document.getElementById('btnStopRecord');
+  const recordPauseIcon = document.getElementById('recordPauseIcon');
+  const recordingExportModal = document.getElementById('recordingExportModal');
+  const closeRecordModalBtn = document.getElementById('closeRecordModalBtn');
+  const recordedAudioPlayer = document.getElementById('recordedAudioPlayer');
+  const btnDownloadWav = document.getElementById('btnDownloadWav');
+  const exportDurationText = document.getElementById('exportDurationText');
 
   // HUD Elements
   const hudGestureBanner = document.getElementById('hudGestureBanner');
@@ -44,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pitchModVal = document.getElementById('pitchModVal');
   const wahModBar = document.getElementById('wahModBar');
   const wahModVal = document.getElementById('wahModVal');
+  const fpsCounter = document.getElementById('fpsCounter');
 
   // Tune Card Elements
   const activeGestureIcon = document.getElementById('activeGestureIcon');
@@ -62,10 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Modals
   const tutorialModal = document.getElementById('tutorialModal');
   const settingsModal = document.getElementById('settingsModal');
+  const keyboardModal = document.getElementById('keyboardModal');
   const btnTutorial = document.getElementById('btnTutorial');
   const btnSettings = document.getElementById('btnSettings');
+  const btnKeyboardGuide = document.getElementById('btnKeyboardGuide');
   const closeTutorialBtn = document.getElementById('closeTutorialBtn');
   const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+  const closeKeyboardBtn = document.getElementById('closeKeyboardBtn');
+  const btnCloseKeyboardModal = document.getElementById('btnCloseKeyboardModal');
   const btnGotIt = document.getElementById('btnGotIt');
   const btnSaveSettings = document.getElementById('btnSaveSettings');
 
@@ -74,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.airGuitarAudio = audio;
 
   const visualizer = new window.AirGuitarVisualizer(canvas, scopeCanvas);
+  visualizer.setTheme(state.currentTheme);
   const tracker = new window.AirGuitarHandTracker();
 
   // Resize canvas to match display
@@ -105,7 +133,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // Initialize UI & Gesture Mapping List
+  // Theme Switching System
+  // =========================================================================
+
+  if (themeSelect) {
+    themeSelect.addEventListener('change', (e) => {
+      const theme = e.target.value;
+      state.currentTheme = theme;
+      document.body.setAttribute('data-theme', theme);
+      localStorage.setItem('airguitar_theme', theme);
+      visualizer.setTheme(theme);
+      showToast(`Visual theme switched to ${e.target.options[e.target.selectedIndex].text}`);
+    });
+  }
+
+  // =========================================================================
+  // Visualizer Mode Selector
+  // =========================================================================
+
+  document.querySelectorAll('.viz-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.viz-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.dataset.mode;
+      visualizer.setVisualizerMode(mode);
+      showToast(`Visualizer mode: ${btn.textContent}`);
+    });
+  });
+
+  // Direct Canvas Strumming & Plucking Connection
+  visualizer.onInteractivePluck = (stringIdx, fret) => {
+    audio.pluckString(stringIdx, fret, 0.95);
+  };
+
+  // =========================================================================
+  // Initialize UI & Gesture Mapping List with Instant Audition
   // =========================================================================
 
   function renderGestureList() {
@@ -134,6 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="gesture-name">${g.name}</span>
             <span class="gesture-tag-pill">${g.tag || 'SYNTH'}</span>
           </div>
+          <div class="gesture-row-actions">
+            <button class="btn-audition-play" data-gesture-id="${g.id}" title="Preview / Play Riff">
+              <i data-lucide="play"></i>
+            </button>
+          </div>
         </div>
         <div class="gesture-row-bottom">
           <select class="gesture-tune-select" data-gesture-id="${g.id}">
@@ -151,9 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
+      // Audition preview button click
+      const auditionBtn = row.querySelector('.btn-audition-play');
+      auditionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playGestureTune(g.id);
+      });
+
       // Row click handler (manual trigger)
       row.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'SELECT') {
+        if (e.target.tagName !== 'SELECT' && !e.target.closest('.btn-audition-play')) {
           playGestureTune(g.id);
         }
       });
@@ -188,9 +262,10 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => cameraHeroCard.style.display = 'none', 400);
       cameraStatus.classList.add('active');
       cameraStatusText.textContent = "Vision: Active";
-      showToast("Ready! Show any hand gesture to synthesize tunes.");
+      showToast("Ready! Show any hand gesture or pluck the canvas strings.");
     } else {
-      showToast("Could not access camera. Please allow webcam permissions.");
+      showToast("Could not access camera. You can still play with keyboard and mouse!");
+      cameraHeroCard.style.display = 'none';
     }
   }
 
@@ -214,6 +289,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnLaunchGuitar.addEventListener('click', () => {
     startAirGuitar();
+  });
+
+  btnLaunchKeyboard.addEventListener('click', () => {
+    audio.init();
+    audio.resume();
+    cameraHeroCard.style.opacity = '0';
+    setTimeout(() => cameraHeroCard.style.display = 'none', 400);
+    showToast("Keyboard Mode Active! Use 1-6 keys to pluck, Q-R for chords, A-K for riffs.");
   });
 
   // =========================================================================
@@ -286,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activeTuneName.textContent = "Idle";
     activeGestureIcon.innerHTML = `<i data-lucide="music"></i>`;
     currentTuneTitle.textContent = "Ready to Play";
-    currentTuneStyle.textContent = "Show a hand gesture to start a tune";
+    currentTuneStyle.textContent = "Show a hand gesture or press hotkeys to play";
     hudGestureBanner.classList.remove('visible');
     document.querySelectorAll('.gesture-tune-row').forEach(row => row.classList.remove('active'));
 
@@ -333,9 +416,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Main Visualizer Animation Frame Loop
+  // Main Visualizer Animation Frame Loop & FPS calculation
   let currentLandmarks = null;
   let currentPoint = null;
+  let lastFrameTime = performance.now();
+  let frameCount = 0;
+  let fpsTimer = performance.now();
 
   tracker.onFrameLandmarks = (results, landmarks, smoothedPoint) => {
     currentLandmarks = landmarks;
@@ -343,10 +429,131 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function renderLoop() {
+    const now = performance.now();
+    frameCount++;
+    if (now - fpsTimer >= 1000) {
+      const fps = Math.round((frameCount * 1000) / (now - fpsTimer));
+      if (fpsCounter) fpsCounter.textContent = `${fps} FPS`;
+      frameCount = 0;
+      fpsTimer = now;
+    }
+
     visualizer.render(video, currentLandmarks, currentPoint, audio.isPlayingTune);
     requestAnimationFrame(renderLoop);
   }
   requestAnimationFrame(renderLoop);
+
+  // =========================================================================
+  // Studio Lossless WAV Recorder Controls
+  // =========================================================================
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = Math.floor(sec % 60).toString().padStart(2, '0');
+    const ms = Math.floor((sec % 1) * 10);
+    return `${m}:${s}.${ms}`;
+  }
+
+  audio.onRecordTimeUpdate = (elapsedSec) => {
+    if (recordTimer) {
+      recordTimer.textContent = formatTime(elapsedSec);
+    }
+  };
+
+  btnRecord.addEventListener('click', () => {
+    if (!audio.isRecording) {
+      audio.startRecording();
+      btnRecord.classList.add('recording');
+      recordBtnText.textContent = "REC";
+      btnPauseRecord.style.display = 'flex';
+      btnStopRecord.style.display = 'flex';
+      showToast("Live recording session started. Play your guitar riffs!");
+    }
+  });
+
+  btnPauseRecord.addEventListener('click', () => {
+    const isPaused = audio.pauseRecording();
+    if (isPaused) {
+      recordPauseIcon.setAttribute('data-lucide', 'play');
+      btnRecord.classList.remove('recording');
+      showToast("Recording paused.");
+    } else {
+      recordPauseIcon.setAttribute('data-lucide', 'pause');
+      btnRecord.classList.add('recording');
+      showToast("Recording resumed.");
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+
+  btnStopRecord.addEventListener('click', () => {
+    const wavResult = audio.stopRecording();
+    btnRecord.classList.remove('recording');
+    btnPauseRecord.style.display = 'none';
+    btnStopRecord.style.display = 'none';
+    recordTimer.textContent = "00:00.0";
+
+    if (wavResult && wavResult.url) {
+      recordedAudioPlayer.src = wavResult.url;
+      btnDownloadWav.href = wavResult.url;
+      exportDurationText.textContent = `Duration: ${formatTime(wavResult.duration)}`;
+      recordingExportModal.classList.add('open');
+      showToast("Performance recorded! Lossless WAV audio ready for download.");
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+  });
+
+  closeRecordModalBtn.addEventListener('click', () => {
+    recordingExportModal.classList.remove('open');
+    recordedAudioPlayer.pause();
+  });
+
+  // =========================================================================
+  // 3-Band Studio EQ Controls
+  // =========================================================================
+
+  const eqLowSlider = document.getElementById('eqLowSlider');
+  const eqMidSlider = document.getElementById('eqMidSlider');
+  const eqHighSlider = document.getElementById('eqHighSlider');
+  const eqLowVal = document.getElementById('eqLowVal');
+  const eqMidVal = document.getElementById('eqMidVal');
+  const eqHighVal = document.getElementById('eqHighVal');
+  const eqPresetSelect = document.getElementById('eqPresetSelect');
+
+  if (eqLowSlider) {
+    eqLowSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      audio.setEqLow(val);
+      eqLowVal.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB`;
+    });
+  }
+
+  if (eqMidSlider) {
+    eqMidSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      audio.setEqMid(val);
+      eqMidVal.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB`;
+    });
+  }
+
+  if (eqHighSlider) {
+    eqHighSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      audio.setEqHigh(val);
+      eqHighVal.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB`;
+    });
+  }
+
+  if (eqPresetSelect) {
+    eqPresetSelect.addEventListener('change', (e) => {
+      const p = audio.setEqPreset(e.target.value);
+      eqLowSlider.value = p.low;
+      eqMidSlider.value = p.mid;
+      eqHighSlider.value = p.high;
+      eqLowVal.textContent = `${p.low > 0 ? '+' : ''}${p.low.toFixed(1)} dB`;
+      eqMidVal.textContent = `${p.mid > 0 ? '+' : ''}${p.mid.toFixed(1)} dB`;
+      eqHighVal.textContent = `${p.high > 0 ? '+' : ''}${p.high.toFixed(1)} dB`;
+    });
+  }
 
   // =========================================================================
   // Sound Controls, Pedalboard & Drum Machine
@@ -439,12 +646,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Drum Backing Machine
+  // Drum Backing Machine & Tap Tempo
   const btnToggleDrums = document.getElementById('btnToggleDrums');
   const drumIcon = document.getElementById('drumIcon');
   const drumText = document.getElementById('drumText');
   const bpmSlider = document.getElementById('bpmSlider');
   const bpmText = document.getElementById('bpmText');
+  const btnTapTempo = document.getElementById('btnTapTempo');
+  const beatPulseDot = document.getElementById('beatPulseDot');
 
   document.querySelectorAll('.drum-chip').forEach(pill => {
     pill.addEventListener('click', () => {
@@ -466,6 +675,40 @@ document.addEventListener('DOMContentLoaded', () => {
     bpmText.textContent = bpm;
     audio.setBpm(bpm);
   });
+
+  // Tap Tempo Logic
+  let tapTimes = [];
+  if (btnTapTempo) {
+    btnTapTempo.addEventListener('click', () => {
+      const now = performance.now();
+      tapTimes.push(now);
+      if (tapTimes.length > 4) tapTimes.shift();
+
+      if (tapTimes.length >= 2) {
+        let intervals = [];
+        for (let i = 1; i < tapTimes.length; i++) {
+          const delta = tapTimes[i] - tapTimes[i - 1];
+          if (delta < 2000) intervals.push(delta);
+        }
+        if (intervals.length > 0) {
+          const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const calculatedBpm = Math.max(70, Math.min(180, Math.round(60000 / avgInterval)));
+          bpmSlider.value = calculatedBpm;
+          bpmText.textContent = calculatedBpm;
+          audio.setBpm(calculatedBpm);
+          showToast(`Tap Tempo: ${calculatedBpm} BPM`);
+        }
+      }
+    });
+  }
+
+  // Beat Beacon Pulse Loop
+  setInterval(() => {
+    if (beatPulseDot && audio.isDrumsPlaying) {
+      beatPulseDot.classList.add('pulse');
+      setTimeout(() => beatPulseDot.classList.remove('pulse'), 120);
+    }
+  }, (60 / (audio.drumBpm || 115)) * 1000);
 
   // Hand Modulation Options
   document.getElementById('enablePitchMod').addEventListener('change', (e) => {
@@ -489,6 +732,63 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // =========================================================================
+  // Keyboard Studio Controls & Shortcuts
+  // =========================================================================
+
+  window.addEventListener('keydown', (e) => {
+    // Ignore if typing inside input / select
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+    const key = e.key.toLowerCase();
+
+    // 1-6 Keys: Direct String Plucking
+    if (['1', '2', '3', '4', '5', '6'].includes(key)) {
+      const strIndex = parseInt(key, 10) - 1;
+      audio.pluckString(strIndex, 0, 0.95);
+      e.preventDefault();
+      return;
+    }
+
+    // Q, W, E, R: Chords Strumming
+    if (key === 'q') { audio.strumChord('Em'); e.preventDefault(); return; }
+    if (key === 'w') { audio.strumChord('G'); e.preventDefault(); return; }
+    if (key === 'e') { audio.strumChord('C'); e.preventDefault(); return; }
+    if (key === 'r' && !e.ctrlKey) { audio.strumChord('D'); e.preventDefault(); return; }
+
+    // A-K Keys: Gesture Riffs
+    const gestureKeyMap = {
+      'a': 'rock_horns',
+      's': 'peace_sign',
+      'd': 'open_palm',
+      'f': 'index_point',
+      'g': 'closed_fist',
+      'h': 'thumbs_up',
+      'j': 'pinch_grip',
+      'k': 'shaka_sign'
+    };
+
+    if (gestureKeyMap[key]) {
+      playGestureTune(gestureKeyMap[key]);
+      e.preventDefault();
+      return;
+    }
+
+    // Spacebar: Heavy Metal Power Chord Chug
+    if (e.code === 'Space') {
+      audio.strumChord('E5', 1.0);
+      e.preventDefault();
+      return;
+    }
+
+    // Mute toggle
+    if (key === 'm') {
+      btnMuteToggle.click();
+      e.preventDefault();
+      return;
+    }
+  });
+
+  // =========================================================================
   // Modals & Settings
   // =========================================================================
 
@@ -505,6 +805,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('open'));
   btnSaveSettings.addEventListener('click', () => settingsModal.classList.remove('open'));
+
+  btnKeyboardGuide.addEventListener('click', () => {
+    keyboardModal.classList.add('open');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+  closeKeyboardBtn.addEventListener('click', () => keyboardModal.classList.remove('open'));
+  btnCloseKeyboardModal.addEventListener('click', () => keyboardModal.classList.remove('open'));
 
   // Settings inputs
   document.getElementById('setGestureDebounce').addEventListener('input', (e) => {

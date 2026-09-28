@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AirGuitar AI — Next-Gen Gesture Virtual Instrument</title>
+  <title>AirGuitar AI — Next-Gen Gesture Virtual Instrument & Studio</title>
   <meta name="description" content="An ultra-modern, clean, interactive virtual guitar powered by real-time computer vision AI and physical string modeling.">
   
   <!-- Premium Modern Fonts -->
@@ -22,7 +22,7 @@
 
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="studio-body">
+<body class="studio-body" data-theme="cyber-synthwave">
   <!-- Top Minimalist Studio Navigation -->
   <header class="studio-header">
     <div class="brand-cluster">
@@ -36,6 +36,21 @@
         </div>
         <span class="brand-sub">Spatial Vision Audio Synthesizer</span>
       </div>
+    </div>
+
+    <!-- Studio Live Recording Station Toolbar -->
+    <div class="studio-recorder-bar" id="recorderBar">
+      <button class="record-btn" id="btnRecord" title="Record Live Guitar Session">
+        <span class="record-dot" id="recordLed"></span>
+        <span id="recordBtnText">REC</span>
+      </button>
+      <div class="record-timer" id="recordTimer">00:00.0</div>
+      <button class="record-sub-btn" id="btnPauseRecord" title="Pause / Resume Recording" style="display: none;">
+        <i data-lucide="pause" id="recordPauseIcon"></i>
+      </button>
+      <button class="record-sub-btn stop-rec" id="btnStopRecord" title="Stop & Export WAV" style="display: none;">
+        <i data-lucide="square"></i>
+      </button>
     </div>
 
     <!-- Live Studio Status Chips -->
@@ -57,11 +72,26 @@
         </div>
         <span class="chip-text">Sound: <strong id="activeTuneName">Idle</strong></span>
       </div>
+      <div class="status-chip telemetry-chip" id="telemetryChip" title="Real-time Audio Engine DSP Telemetry">
+        <span class="telemetry-item" id="fpsCounter">60 FPS</span>
+        <span class="telemetry-divider">•</span>
+        <span class="telemetry-item">24-BIT / 48kHz</span>
+      </div>
     </div>
 
     <!-- Quick Navigation Actions -->
     <div class="header-actions">
-      <!-- Layout toggle buttons for easy navigation -->
+      <!-- Theme Switcher Selector -->
+      <div class="theme-selector-wrap">
+        <select class="theme-select" id="themeSelect" title="Select Studio Visual Theme">
+          <option value="cyber-synthwave">⚡ Cyber Synthwave</option>
+          <option value="obsidian-gold">👑 Obsidian Gold</option>
+          <option value="matrix-emerald">🧪 Matrix Emerald</option>
+          <option value="solar-sunset">🌅 Solar Sunset</option>
+        </select>
+      </div>
+
+      <!-- Layout toggle buttons -->
       <div class="panel-toggles-group">
         <button class="nav-toggle-btn active" id="toggleLeftPanel" title="Toggle Gesture Deck (Left Panel)">
           <i data-lucide="panel-left"></i>
@@ -75,6 +105,10 @@
 
       <div class="header-divider"></div>
 
+      <button class="nav-btn" id="btnKeyboardGuide" title="Keyboard & Strum Controls">
+        <i data-lucide="keyboard"></i>
+        <span>Keys</span>
+      </button>
       <button class="nav-btn" id="btnTutorial" title="View Gesture Guide">
         <i data-lucide="book-open"></i>
         <span>Guide</span>
@@ -155,7 +189,7 @@
       </div>
 
       <div class="gesture-deck-scroll" id="gestureTuneList">
-        <!-- Rendered via JavaScript with clean vector icons -->
+        <!-- Rendered via JavaScript with clean vector icons & audition play buttons -->
       </div>
     </aside>
 
@@ -165,19 +199,31 @@
         <!-- Video Source (Hidden from direct view) -->
         <video id="webcamVideo" playsinline autoplay muted style="display: none;"></video>
         
-        <!-- Interactive Guitar Canvas -->
-        <canvas id="guitarCanvas" width="1280" height="720"></canvas>
+        <!-- Interactive Guitar Canvas (Click/Drag to Pluck Strings) -->
+        <canvas id="guitarCanvas" width="1280" height="720" title="Click or Drag across strings to strum!"></canvas>
 
         <!-- Floating HUD Layer -->
         <div class="hud-glass-layer" id="hudLayer">
-          <!-- Gesture Detection Floating Pill (Top Center) -->
-          <div class="floating-gesture-pill" id="hudGestureBanner">
-            <div class="floating-icon-wrap" id="hudGestureIcon">
-              <i data-lucide="flame"></i>
+          <!-- Top Row: Gesture Banner + Visualizer Mode Switcher -->
+          <div class="hud-top-bar">
+            <!-- Gesture Detection Floating Pill -->
+            <div class="floating-gesture-pill" id="hudGestureBanner">
+              <div class="floating-icon-wrap" id="hudGestureIcon">
+                <i data-lucide="flame"></i>
+              </div>
+              <div class="floating-meta">
+                <span class="floating-title" id="hudGestureTitle">Rock Horns</span>
+                <span class="floating-sub" id="hudTuneSubtitle">Heavy Rock Solo Riff</span>
+              </div>
             </div>
-            <div class="floating-meta">
-              <span class="floating-title" id="hudGestureTitle">Rock Horns</span>
-              <span class="floating-sub" id="hudTuneSubtitle">Heavy Rock Solo Riff</span>
+
+            <!-- Visualizer FX Mode Switcher Pill -->
+            <div class="visualizer-mode-pill" id="vizModePill">
+              <span class="viz-pill-label"><i data-lucide="eye"></i> FX MODE</span>
+              <button class="viz-mode-btn active" data-mode="laser-strings" title="Laser Strings & Note Harmonics">Laser Strings</button>
+              <button class="viz-mode-btn" data-mode="cyber-orbit" title="Radial Cyber Orbit Spectrum">Cyber Orbit</button>
+              <button class="viz-mode-btn" data-mode="grid-3d" title="3D Holographic Horizon Grid">3D Grid</button>
+              <button class="viz-mode-btn" data-mode="particle-nebula" title="Fluid Particle Nebula Trails">Nebula</button>
             </div>
           </div>
 
@@ -185,7 +231,7 @@
           <div class="floating-fret-hud" id="hudFretboard">
             <div class="fret-nut-label">
               <i data-lucide="activity"></i>
-              <span>VIRTUAL NECK</span>
+              <span>VIRTUAL NECK (1-6 Keys / Click String to Pluck)</span>
             </div>
             <div class="fret-markers-row" id="fretPositions">
               <div class="fret-node" data-fret="0"><span>OPEN</span></div>
@@ -201,7 +247,7 @@
           <!-- Minimalist Toast -->
           <div class="floating-toast" id="hudToast">
             <i data-lucide="sparkles"></i>
-            <span id="hudToastMsg">Start vision camera and show any hand gesture to synthesize guitar tunes.</span>
+            <span id="hudToastMsg">Start vision camera, drag canvas to pluck, or press 1-6 keys to play.</span>
           </div>
         </div>
 
@@ -212,7 +258,7 @@
               <i data-lucide="zap"></i>
             </div>
             <h2>AirGuitar Studio AI</h2>
-            <p class="hero-tagline">Real-time spatial computer vision synthesizer. Play continuous guitar riffs in mid-air with clean gesture recognition and 3D modulation.</p>
+            <p class="hero-tagline">Real-time spatial computer vision synthesizer. Play continuous guitar riffs in mid-air, pluck virtual strings, and export lossless audio.</p>
             
             <div class="gesture-quick-grid">
               <div class="q-card">
@@ -237,7 +283,7 @@
                 </div>
               </div>
               <div class="q-card">
-                <div class="q-card-icon"><i data-lucide="zap"></i></div>
+                <div class="q-card-info"><i data-lucide="zap"></i></div>
                 <div class="q-card-info">
                   <strong>Index Point</strong>
                   <span>Soulful Blues Lick</span>
@@ -259,10 +305,16 @@
               </div>
             </div>
 
-            <button class="hero-cta-button" id="btnLaunchGuitar">
-              <i data-lucide="play-circle"></i>
-              <span>Launch Studio Experience</span>
-            </button>
+            <div class="hero-action-buttons">
+              <button class="hero-cta-button" id="btnLaunchGuitar">
+                <i data-lucide="play-circle"></i>
+                <span>Launch Vision Studio</span>
+              </button>
+              <button class="hero-secondary-button" id="btnLaunchKeyboard">
+                <i data-lucide="keyboard"></i>
+                <span>Play with Keyboard / Mouse</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -324,10 +376,44 @@
             <i data-lucide="activity"></i>
             <span>REALTIME OSCILLOSCOPE</span>
           </div>
-          <span class="unit-badge">24-BIT</span>
+          <span class="unit-badge">24-BIT DSP</span>
         </div>
         <div class="scope-screen-wrapper">
           <canvas id="audioVisualizerCanvas" width="280" height="70"></canvas>
+        </div>
+      </div>
+
+      <!-- Studio 3-Band Equalizer Unit -->
+      <div class="panel-card-unit">
+        <div class="unit-header">
+          <div class="unit-title">
+            <i data-lucide="equalizer" class="accent-icon"></i>
+            <span>3-BAND STUDIO EQ</span>
+          </div>
+          <div class="eq-preset-dropdown">
+            <select id="eqPresetSelect" class="micro-select">
+              <option value="flat">Flat</option>
+              <option value="rock-scoop" selected>Rock Scoop</option>
+              <option value="warm-acoustic">Warm Acoustic</option>
+              <option value="bright-lead">Bright Lead</option>
+              <option value="heavy-punch">Heavy Punch</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="eq-sliders-grid">
+          <div class="eq-cell">
+            <div class="eq-label-row"><span>Low (250Hz)</span><span class="eq-val" id="eqLowVal">+2.0 dB</span></div>
+            <input type="range" class="modern-slider" id="eqLowSlider" min="-12" max="12" step="0.5" value="2.0">
+          </div>
+          <div class="eq-cell">
+            <div class="eq-label-row"><span>Mid (1.5kHz)</span><span class="eq-val" id="eqMidVal">+1.5 dB</span></div>
+            <input type="range" class="modern-slider" id="eqMidSlider" min="-12" max="12" step="0.5" value="1.5">
+          </div>
+          <div class="eq-cell">
+            <div class="eq-label-row"><span>High (4.5kHz)</span><span class="eq-val" id="eqHighVal">-1.0 dB</span></div>
+            <input type="range" class="modern-slider" id="eqHighSlider" min="-12" max="12" step="0.5" value="-1.0">
+          </div>
         </div>
       </div>
 
@@ -420,8 +506,9 @@
         <div class="unit-header">
           <div class="unit-title">
             <i data-lucide="disc"></i>
-            <span>BACKING DRUM MACHINE</span>
+            <span>BACKING DRUMS & TEMPO</span>
           </div>
+          <div class="beat-pulse-beacon" id="beatPulseDot" title="Rhythmic Quarter Note Beacon"></div>
         </div>
 
         <div class="drum-machine-module">
@@ -437,6 +524,9 @@
             <button class="drum-play-trigger" id="btnToggleDrums">
               <i data-lucide="play" id="drumIcon"></i>
               <span id="drumText">Play Drums</span>
+            </button>
+            <button class="btn-tap-tempo" id="btnTapTempo" title="Tap repeatedly to set BPM">
+              <span>TAP</span>
             </button>
             <div class="tempo-rack">
               <div class="tempo-display">BPM: <strong id="bpmText">115</strong></div>
@@ -472,6 +562,79 @@
     </aside>
   </main>
 
+  <!-- Audio Recording Export Modal -->
+  <div class="studio-modal-backdrop" id="recordingExportModal">
+    <div class="modal-dialog-box record-export-dialog">
+      <div class="modal-dialog-header">
+        <div class="modal-header-title">
+          <i data-lucide="sparkles" class="accent-icon"></i>
+          <h3>Performance Recorded</h3>
+        </div>
+        <button class="modal-close-icon" id="closeRecordModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-dialog-body">
+        <div class="record-preview-box">
+          <div class="record-meta-info">
+            <div class="rec-badge"><i data-lucide="disc"></i> LOSSLESS WAV</div>
+            <div class="rec-duration" id="exportDurationText">Duration: 00:15.2</div>
+          </div>
+          <audio id="recordedAudioPlayer" controls class="studio-audio-player"></audio>
+        </div>
+        <p class="export-note">Studio-quality 16-bit PCM uncompressed audio ready for direct export into your DAW or video editor.</p>
+      </div>
+      <div class="modal-dialog-footer">
+        <a id="btnDownloadWav" class="modal-primary-btn" download="AirGuitar-Performance.wav">
+          <i data-lucide="download"></i>
+          <span>Download WAV Audio</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Controls Modal -->
+  <div class="studio-modal-backdrop" id="keyboardModal">
+    <div class="modal-dialog-box">
+      <div class="modal-dialog-header">
+        <div class="modal-header-title">
+          <i data-lucide="keyboard"></i>
+          <h3>Studio Keyboard Shortcuts</h3>
+        </div>
+        <button class="modal-close-icon" id="closeKeyboardBtn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-dialog-body">
+        <div class="keys-guide-grid">
+          <div class="key-card">
+            <kbd>1</kbd> - <kbd>6</kbd>
+            <span>Pluck Strings 1 (High E) to 6 (Low E)</span>
+          </div>
+          <div class="key-card">
+            <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd>
+            <span>Strum Em, G, C, D Chords</span>
+          </div>
+          <div class="key-card">
+            <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd>
+            <span>Trigger Rock Horns, Peace Sign, Palm, Blues Lick</span>
+          </div>
+          <div class="key-card">
+            <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd>
+            <span>Trigger Metal Chug, Funk, Ambient, Surf Riffs</span>
+          </div>
+          <div class="key-card">
+            <kbd>Space</kbd>
+            <span>Heavy Metal Power Chord Chug</span>
+          </div>
+          <div class="key-card">
+            <kbd>M</kbd> / <kbd>D</kbd>
+            <span>Toggle Mute / Toggle Backing Drums</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-dialog-footer">
+        <button class="modal-primary-btn" id="btnCloseKeyboardModal">Got It</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Tutorial Guide Modal -->
   <div class="studio-modal-backdrop" id="tutorialModal">
     <div class="modal-dialog-box">
@@ -486,8 +649,8 @@
         <div class="tutorial-card-row">
           <div class="step-badge">1</div>
           <div class="step-text">
-            <h4>Start Vision Camera</h4>
-            <p>Position your hand within your camera's field of view. Keep your hand facing forward for accurate finger recognition.</p>
+            <h4>Start Vision Camera or Use Interactive Canvas</h4>
+            <p>Position your hand within your camera's field of view. You can also click or drag across the interactive canvas strings directly!</p>
           </div>
         </div>
 

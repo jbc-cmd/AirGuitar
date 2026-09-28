@@ -3,7 +3,7 @@
    Clean, Modern, Vector-Driven Audio Workstation UI
    ========================================================================== */
 
-:root {
+:root, [data-theme="cyber-synthwave"] {
   /* Surface & Background Colors */
   --bg-deep: #06080e;
   --bg-panel: rgba(12, 16, 26, 0.88);
@@ -31,6 +31,11 @@
   --accent-red: #ef4444;
   --accent-violet: #a855f7;
 
+  /* Theme Primary Colors */
+  --theme-primary: #00f0ff;
+  --theme-secondary: #8b5cf6;
+  --theme-glow: rgba(0, 240, 255, 0.35);
+
   /* Typography */
   --font-primary: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -50,6 +55,51 @@
   /* Transitions */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --trans: 0.2s var(--ease);
+}
+
+[data-theme="obsidian-gold"] {
+  --bg-deep: #0a0907;
+  --bg-panel: rgba(20, 18, 14, 0.9);
+  --bg-card: rgba(30, 27, 20, 0.7);
+  --bg-elevated: #28241c;
+  --bg-hover: #363024;
+  --bg-active: #484030;
+  --border-accent: rgba(255, 215, 0, 0.5);
+  --accent-cyan: #ffd700;
+  --accent-cyan-glow: rgba(255, 215, 0, 0.35);
+  --theme-primary: #ffd700;
+  --theme-secondary: #f59e0b;
+  --theme-glow: rgba(255, 215, 0, 0.4);
+}
+
+[data-theme="matrix-emerald"] {
+  --bg-deep: #040d08;
+  --bg-panel: rgba(8, 24, 14, 0.9);
+  --bg-card: rgba(12, 34, 20, 0.7);
+  --bg-elevated: #113821;
+  --bg-hover: #174b2c;
+  --bg-active: #1f643b;
+  --border-accent: rgba(16, 185, 129, 0.5);
+  --accent-cyan: #10b981;
+  --accent-cyan-glow: rgba(16, 185, 129, 0.35);
+  --theme-primary: #10b981;
+  --theme-secondary: #00ff66;
+  --theme-glow: rgba(16, 185, 129, 0.4);
+}
+
+[data-theme="solar-sunset"] {
+  --bg-deep: #0e060a;
+  --bg-panel: rgba(24, 12, 18, 0.9);
+  --bg-card: rgba(36, 18, 28, 0.7);
+  --bg-elevated: #3b1c2d;
+  --bg-hover: #4e253c;
+  --bg-active: #66304e;
+  --border-accent: rgba(255, 51, 102, 0.5);
+  --accent-cyan: #ff3366;
+  --accent-cyan-glow: rgba(255, 51, 102, 0.35);
+  --theme-primary: #ff3366;
+  --theme-secondary: #fb923c;
+  --theme-glow: rgba(255, 51, 102, 0.4);
 }
 
 *, *::before, *::after {
@@ -1746,28 +1796,474 @@ body.studio-body {
   color: var(--text-muted);
 }
 
-.modal-dialog-footer {
-  padding: 12px 18px;
-  border-top: 1px solid var(--border-subtle);
+/* ==========================================================================
+   Studio Live Audio Recorder Toolbar
+   ========================================================================== */
+
+.studio-recorder-bar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-light);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.modal-primary-btn {
-  padding: 8px 18px;
-  background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
-  color: #040810;
-  font-size: 0.78rem;
+.record-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  font-size: 0.72rem;
   font-weight: 800;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.record-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+.record-btn.recording {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
+}
+
+.record-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.record-btn.recording .record-dot {
+  background: #fff;
+  animation: recPulse 1s infinite alternate;
+}
+
+@keyframes recPulse {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0.3; transform: scale(0.7); }
+}
+
+.record-timer {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 52px;
+  text-align: center;
+}
+
+.record-sub-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.record-sub-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+  color: var(--accent-cyan);
+}
+
+.record-sub-btn.stop-rec:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.record-sub-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ==========================================================================
+   Theme Selector & Telemetry Badge
+   ========================================================================== */
+
+.theme-selector-wrap {
+  position: relative;
+}
+
+.theme-select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  outline: none;
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.theme-select:hover, .theme-select:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 10px var(--theme-glow);
+}
+
+.telemetry-chip {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.telemetry-item {
+  color: var(--theme-primary);
+  font-weight: 600;
+}
+
+.telemetry-divider {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+/* ==========================================================================
+   HUD Visualizer Mode Selector & Top Bar
+   ========================================================================== */
+
+.hud-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.visualizer-mode-pill {
+  display: flex;
+  align-items: center;
+  background: rgba(10, 14, 24, 0.85);
+  backdrop-filter: blur(14px);
+  padding: 4px 6px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-light);
+  gap: 4px;
+}
+
+.viz-pill-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  letter-spacing: 0.04em;
+}
+
+.viz-pill-label svg {
+  width: 12px;
+  height: 12px;
+  color: var(--theme-primary);
+}
+
+.viz-mode-btn {
+  background: transparent;
   border: none;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.viz-mode-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.viz-mode-btn.active {
+  background: var(--theme-primary);
+  color: #040810;
+  font-weight: 800;
+  box-shadow: 0 0 12px var(--theme-glow);
+}
+
+/* ==========================================================================
+   Studio 3-Band Equalizer Styles
+   ========================================================================== */
+
+.micro-select {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: var(--r-xs);
+  outline: none;
+  cursor: pointer;
+}
+
+.micro-select:hover {
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+
+.eq-sliders-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.eq-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eq-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.eq-val {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--theme-primary);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Beat Pulse Beacon & Tap Tempo
+   ========================================================================== */
+
+.beat-pulse-beacon {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  transition: all 0.08s ease;
+}
+
+.beat-pulse-beacon.pulse {
+  background: var(--theme-primary);
+  box-shadow: 0 0 12px var(--theme-glow);
+  transform: scale(1.35);
+}
+
+.btn-tap-tempo {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 6px 10px;
   border-radius: var(--r-sm);
   cursor: pointer;
   transition: var(--trans);
 }
 
-.modal-primary-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 16px var(--accent-cyan);
+.btn-tap-tempo:hover {
+  background: var(--bg-hover);
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+}
+
+.btn-tap-tempo:active {
+  transform: scale(0.92);
+  background: var(--theme-primary);
+  color: #040810;
+}
+
+/* ==========================================================================
+   Instant Audition Play Button in Gesture List
+   ========================================================================== */
+
+.gesture-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-audition-play {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--trans);
+  flex-shrink: 0;
+}
+
+.btn-audition-play:hover {
+  background: var(--theme-primary);
+  color: #040810;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 10px var(--theme-glow);
+  transform: scale(1.08);
+}
+
+.btn-audition-play svg {
+  width: 12px;
+  height: 12px;
+  margin-left: 1px;
+}
+
+/* ==========================================================================
+   Audio Export & Keyboard Modal Styles
+   ========================================================================== */
+
+.record-export-dialog {
+  max-width: 480px;
+}
+
+.record-preview-box {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.record-meta-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rec-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--theme-primary);
+  background: rgba(0, 240, 255, 0.1);
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-accent);
+}
+
+.rec-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.rec-duration {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.studio-audio-player {
+  width: 100%;
+  height: 38px;
+  border-radius: var(--r-sm);
+  outline: none;
+}
+
+.export-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 10px;
+}
+
+.keys-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.key-card {
+  background: var(--bg-elevated);
+  padding: 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.key-card span {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--theme-primary);
+  background: #06080e;
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-xs);
+  box-shadow: 0 2px 0 var(--border-light);
+}
+
+.hero-action-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.hero-secondary-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.hero-secondary-button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--theme-primary);
+  transform: translateY(-2px);
+}
+
+.hero-secondary-button svg {
+  width: 16px;
+  height: 16px;
+  color: var(--theme-primary);
 }
 
 /* ==========================================================================
