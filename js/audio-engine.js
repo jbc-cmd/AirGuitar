@@ -355,9 +355,21 @@ class AirGuitarAudioEngine {
     osc2.start(time);
     oscSub.start(time);
 
-    osc1.stop(time + duration + 0.05);
-    osc2.stop(time + duration + 0.05);
-    oscSub.stop(time + duration + 0.05);
+    const stopTime = time + duration + 0.05;
+    osc1.stop(stopTime);
+    osc2.stop(stopTime);
+    oscSub.stop(stopTime);
+
+    // Auto-disconnect to prevent audio node accumulation & GC stutter
+    osc1.onended = () => {
+      try {
+        osc1.disconnect();
+        osc2.disconnect();
+        oscSub.disconnect();
+        stringFilter.disconnect();
+        noteGain.disconnect();
+      } catch (e) {}
+    };
   }
 
   // Create short pick attack noise buffer
@@ -706,7 +718,7 @@ class AirGuitarAudioEngine {
 
     const time = this.ctx.currentTime;
     const duration = 2.0;
-    this.triggerGuitarNote(freq, duration, velocity, { string: sIdx + 1, fret: fret });
+    this.playGuitarString(freq, time, duration, velocity, { string: sIdx + 1, fret: fret });
 
     if (this.onNoteTrigger) {
       this.onNoteTrigger({ string: sIdx + 1, fret: fret, velocity: velocity });

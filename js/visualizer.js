@@ -184,19 +184,22 @@ class AirGuitarVisualizer {
   }
 
   spawnSparkBurst(x, y, color = '#00f0ff') {
-    const count = 18;
+    const count = 10; // Capped for high performance
+    if (this.particles.length > 35) {
+      this.particles.splice(0, count);
+    }
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 3 + Math.random() * 7;
+      const speed = 2.5 + Math.random() * 5.5;
       this.particles.push({
         x: x,
         y: y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 2.5 + Math.random() * 4.5,
+        size: 2 + Math.random() * 3,
         color: color,
         life: 1.0,
-        decay: 0.025 + Math.random() * 0.035
+        decay: 0.035 + Math.random() * 0.04
       });
     }
   }
@@ -210,19 +213,31 @@ class AirGuitarVisualizer {
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Draw Mirrored Webcam Video
-    if (videoElement && videoElement.readyState >= 2) {
+    // 1. Draw Mirrored Webcam Video (Cover full canvas)
+    if (videoElement && (videoElement.readyState >= 2 || videoElement.currentTime > 0) && videoElement.videoWidth > 0) {
       ctx.save();
       ctx.translate(w, 0);
       ctx.scale(-1, 1);
-      ctx.filter = 'brightness(0.85) contrast(1.1)';
-      ctx.drawImage(videoElement, 0, 0, w, h);
+
+      // Compute aspect ratio cover
+      const vRatio = videoElement.videoWidth / videoElement.videoHeight;
+      const cRatio = w / h;
+      let dw = w, dh = h, dx = 0, dy = 0;
+      if (cRatio > vRatio) {
+        dh = w / vRatio;
+        dy = (h - dh) / 2;
+      } else {
+        dw = h * vRatio;
+        dx = (w - dw) / 2;
+      }
+
+      ctx.drawImage(videoElement, dx, dy, dw, dh);
       ctx.restore();
 
-      // Cyberpunk subtle vignette and scanlines
+      // Subtle vignette
       this.drawCyberVignette(w, h);
     } else {
-      // Dark Grid Background when camera is off
+      // Warm Dark Background when camera is connecting
       this.drawBackdropGrid(w, h, palette);
     }
 
@@ -238,20 +253,23 @@ class AirGuitarVisualizer {
     // Always draw Guitar Strings (with interactive glowing laser style)
     this.drawGuitarStrings(w, h, palette);
 
-    // 3. Draw Hand Landmarks & Glowing Skeleton
+    // 3. Draw Hand Landmarks (Glowing pearls matching clean screenshot aesthetic)
     if (landmarks && this.showSkeleton) {
       this.drawHandSkeleton(landmarks, w, h, palette);
     }
 
-    // 4. Draw Primary Hand Tracking Target Reticle
-    if (controlPoint) {
+    // 4. Draw Primary Hand Tracking Target Reticle (Subtle & clean)
+    if (controlPoint && this.visualizerMode !== 'laser-strings') {
       this.drawTrackingPoint(controlPoint, w, h, isPlayingTune, palette);
     }
 
-    // 5. Update and Draw Particle Sparks
+    // 5. Draw Bottom Golden Undulating Sine Waveforms (Screenshot style)
+    this.drawBottomRibbonWaves(w, h, palette, isPlayingTune);
+
+    // 6. Update and Draw Particle Sparks
     this.updateParticles();
 
-    // 6. Draw Waveform Visualizer on Mini Canvas
+    // 7. Draw Waveform Visualizer on Mini Canvas (if available)
     if (this.scopeCtx) {
       this.drawScope(palette);
     }
@@ -452,54 +470,72 @@ class AirGuitarVisualizer {
     ctx.restore();
   }
 
-  drawHandSkeleton(landmarks, w, h, palette) {
+  drawHandSkeleton(landmarksInput, w, h, palette) {
+    if (!landmarksInput) return;
     const ctx = this.ctx;
 
-    // Hand connections
-    const connections = [
-      [0, 1], [1, 2], [2, 3], [3, 4],       // Thumb
-      [0, 5], [5, 6], [6, 7], [7, 8],       // Index
-      [0, 9], [9, 10], [10, 11], [11, 12],  // Middle
-      [0, 13], [13, 14], [14, 15], [15, 16],// Ring
-      [0, 17], [17, 18], [18, 19], [19, 20],// Pinky
-      [5, 9], [9, 13], [13, 17]             // Palm base
-    ];
+    // Support both single hand array and multi-hand array [[...], [...]]
+    const handsList = Array.isArray(landmarksInput[0]) ? landmarksInput : [landmarksInput];
 
     ctx.save();
-    ctx.strokeStyle = palette.primary;
-    ctx.lineWidth = 2.8;
-    ctx.shadowColor = palette.glow;
-    ctx.shadowBlur = 10;
-    ctx.globalAlpha = 0.75;
+    for (const lm of handsList) {
+      if (!lm || lm.length === 0) continue;
 
-    connections.forEach(([i, j]) => {
-      const p1 = landmarks[i];
-      const p2 = landmarks[j];
-      const x1 = (1.0 - p1.x) * w;
-      const y1 = p1.y * h;
-      const x2 = (1.0 - p2.x) * w;
-      const y2 = p2.y * h;
-
+      // 1. Delicate glowing pearl dots on all 21 joints (matching clean screenshot style)
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+      ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      for (let idx = 0; idx < lm.length; idx++) {
+        const p = lm[idx];
+        const x = (1.0 - p.x) * w;
+        const y = p.y * h;
+        const radius = [4, 8, 12, 16, 20].includes(idx) ? 4.2 : 3.2;
+        ctx.moveTo(x + radius, y);
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Flowing bottom golden ribbons (Screenshot Style)
+  drawBottomRibbonWaves(w, h, palette, isPlaying) {
+    const ctx = this.ctx;
+    const time = performance.now() * 0.0018;
+    const baseY = h * 0.94; // Bottom edge
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Amber / Golden waves from screenshot
+    const waveConfigs = [
+      { color: 'rgba(245, 158, 11, 0.95)', width: 2.8, freq: 0.0055, speed: 1.6, amp: isPlaying ? 24 : 14, phase: 0 },
+      { color: 'rgba(251, 146, 60, 0.85)', width: 2.0, freq: 0.0075, speed: -1.2, amp: isPlaying ? 18 : 10, phase: 1.8 },
+      { color: 'rgba(254, 215, 170, 0.75)', width: 1.6, freq: 0.0095, speed: 2.0, amp: isPlaying ? 14 : 7, phase: 3.4 }
+    ];
+
+    waveConfigs.forEach(wc => {
+      ctx.beginPath();
+      ctx.strokeStyle = wc.color;
+      ctx.lineWidth = wc.width;
+      ctx.shadowColor = wc.color;
+      ctx.shadowBlur = 8;
+
+      const step = 16;
+      for (let x = 0; x <= w + step; x += step) {
+        // Multi-frequency sinusoidal flow
+        const y = baseY + 
+          Math.sin(x * wc.freq + time * wc.speed + wc.phase) * wc.amp +
+          Math.sin(x * wc.freq * 0.5 + time * 0.8) * (wc.amp * 0.4);
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
       ctx.stroke();
     });
 
-    // Draw joint nodes
-    landmarks.forEach((p, index) => {
-      const x = (1.0 - p.x) * w;
-      const y = p.y * h;
-      const isTip = [4, 8, 12, 16, 20].includes(index);
-
-      ctx.beginPath();
-      ctx.arc(x, y, isTip ? 6.5 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = isTip ? palette.accent : palette.primary;
-      ctx.shadowColor = isTip ? palette.accent : palette.primary;
-      ctx.shadowBlur = 14;
-      ctx.globalAlpha = 0.95;
-      ctx.fill();
-    });
     ctx.restore();
   }
 
@@ -510,42 +546,37 @@ class AirGuitarVisualizer {
     const time = performance.now() * 0.003;
 
     ctx.save();
-    const radius = 24 + Math.sin(time * 4) * 4;
+    const radius = 22 + Math.sin(time * 4) * 3;
     ctx.strokeStyle = isPlaying ? palette.primary : palette.secondary;
     ctx.lineWidth = 2;
     ctx.shadowColor = isPlaying ? palette.primary : palette.secondary;
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 10;
 
     ctx.beginPath();
     ctx.arc(px, py, radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Rotating outer reticle wings
-    ctx.beginPath();
-    ctx.arc(px, py, radius + 8, time, time + Math.PI * 0.6);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(px, py, radius + 8, time + Math.PI, time + Math.PI * 1.6);
-    ctx.stroke();
-
     // Center laser point
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Sound coordinates HUD label
     ctx.fillStyle = palette.primary;
     ctx.font = '11px "JetBrains Mono", monospace';
-    ctx.shadowBlur = 4;
-    ctx.fillText(`PITCH: ${Math.round(pt.x * 100)}% | WAH: ${Math.round((1 - pt.y) * 100)}%`, px + 28, py + 4);
+    ctx.shadowBlur = 0;
+    ctx.fillText(`PITCH: ${Math.round(pt.x * 100)}% | WAH: ${Math.round((1 - pt.y) * 100)}%`, px + 26, py + 4);
 
     ctx.restore();
   }
 
   updateParticles() {
+    if (this.particles.length === 0) return;
     const ctx = this.ctx;
     ctx.save();
+    ctx.shadowBlur = 0; // Disable per-particle shadow blur for high frame rates
+
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx;
@@ -560,8 +591,6 @@ class AirGuitarVisualizer {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
       ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 8;
       ctx.globalAlpha = p.life;
       ctx.fill();
     }

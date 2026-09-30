@@ -41,6 +41,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const activeTuneName = document.getElementById('activeTuneName');
   const cameraHeroCard = document.getElementById('cameraHeroCard');
 
+  // Clean UI Elements (Screenshot Style)
+  const quickKeySelect = document.getElementById('quickKeySelect');
+  const quickToneSelect = document.getElementById('quickToneSelect');
+  const btnOpenGuide = document.getElementById('btnOpenGuide');
+  const btnToggleStudioDrawer = document.getElementById('btnToggleStudioDrawer');
+  const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+  const studioDrawer = document.getElementById('studioDrawer');
+  const cleanChordTitle = document.getElementById('cleanChordTitle');
+  const cleanChordSub = document.getElementById('cleanChordSub');
+  const vuBars = document.querySelectorAll('.clean-vu-meter .vu-bar');
+
   // Recorder Elements
   const btnRecord = document.getElementById('btnRecord');
   const recordLed = document.getElementById('recordLed');
@@ -75,13 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const tuneKeyDisplay = document.getElementById('tuneKeyDisplay');
   const gestureTuneList = document.getElementById('gestureTuneList');
 
-  // Panels & Navigation
-  const panelLeft = document.getElementById('panelLeft');
-  const panelRight = document.getElementById('panelRight');
-  const toggleLeftPanel = document.getElementById('toggleLeftPanel');
-  const toggleRightPanel = document.getElementById('toggleRightPanel');
-  const workstationGrid = document.getElementById('workstationGrid');
-
   // Modals
   const tutorialModal = document.getElementById('tutorialModal');
   const settingsModal = document.getElementById('settingsModal');
@@ -101,34 +105,63 @@ document.addEventListener('DOMContentLoaded', () => {
   window.airGuitarAudio = audio;
 
   const visualizer = new window.AirGuitarVisualizer(canvas, scopeCanvas);
-  visualizer.setTheme(state.currentTheme);
+  visualizer.setTheme('obsidian-gold');
   const tracker = new window.AirGuitarHandTracker();
 
-  // Resize canvas to match display
+  // Resize canvas to full window
   function resizeCanvas() {
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width || 1280;
-    canvas.height = rect.height || 720;
+    canvas.width = window.innerWidth || 1280;
+    canvas.height = window.innerHeight || 720;
   }
   window.addEventListener('resize', resizeCanvas);
-  setTimeout(resizeCanvas, 100);
+  resizeCanvas();
 
-  // Panel Toggle Navigation Handlers
-  if (toggleLeftPanel && panelLeft) {
-    toggleLeftPanel.addEventListener('click', () => {
-      panelLeft.classList.toggle('panel-collapsed');
-      toggleLeftPanel.classList.toggle('active');
-      workstationGrid.classList.toggle('left-collapsed', panelLeft.classList.contains('panel-collapsed'));
-      setTimeout(resizeCanvas, 220);
+  // Quick Key Selector Handler (A, B, C, D, E, F, G...)
+  const keyToSemitone = {
+    'C': -4, 'C#': -3, 'D': -2, 'D#': -1, 'E': 0, 'F': 1, 'F#': 2, 'G': 3, 'G#': 4, 'A': 5, 'A#': 6, 'B': 7
+  };
+
+  if (quickKeySelect) {
+    quickKeySelect.addEventListener('change', (e) => {
+      const key = e.target.value;
+      const semitones = keyToSemitone[key] ?? 5;
+      audio.pitchSemitones = semitones;
+      if (cleanChordSub) {
+        cleanChordSub.textContent = `Root: ${key} • ${quickToneSelect ? quickToneSelect.options[quickToneSelect.selectedIndex].text : 'Warm Synth'}`;
+      }
+      showToast(`Key transposed to ${key}`);
     });
   }
 
-  if (toggleRightPanel && panelRight) {
-    toggleRightPanel.addEventListener('click', () => {
-      panelRight.classList.toggle('panel-collapsed');
-      toggleRightPanel.classList.toggle('active');
-      workstationGrid.classList.toggle('right-collapsed', panelRight.classList.contains('panel-collapsed'));
-      setTimeout(resizeCanvas, 220);
+  // Quick Tone Selector Handler
+  if (quickToneSelect) {
+    quickToneSelect.addEventListener('change', (e) => {
+      audio.setTonePreset(e.target.value);
+      if (cleanChordSub) {
+        cleanChordSub.textContent = `Root: ${quickKeySelect ? quickKeySelect.value : 'A'} • ${e.target.options[e.target.selectedIndex].text}`;
+      }
+      showToast(`Tone Preset: ${e.target.options[e.target.selectedIndex].text}`);
+    });
+  }
+
+  // Open Guide Button Handler
+  if (btnOpenGuide && tutorialModal) {
+    btnOpenGuide.addEventListener('click', () => {
+      tutorialModal.classList.add('open');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  }
+
+  // Studio Drawer Toggle Handlers
+  if (btnToggleStudioDrawer && studioDrawer) {
+    btnToggleStudioDrawer.addEventListener('click', () => {
+      studioDrawer.classList.toggle('open');
+    });
+  }
+
+  if (btnCloseDrawer && studioDrawer) {
+    btnCloseDrawer.addEventListener('click', () => {
+      studioDrawer.classList.remove('open');
     });
   }
 
@@ -294,10 +327,17 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLaunchKeyboard.addEventListener('click', () => {
     audio.init();
     audio.resume();
-    cameraHeroCard.style.opacity = '0';
-    setTimeout(() => cameraHeroCard.style.display = 'none', 400);
+    if (cameraHeroCard) {
+      cameraHeroCard.style.opacity = '0';
+      setTimeout(() => cameraHeroCard.style.display = 'none', 400);
+    }
     showToast("Keyboard Mode Active! Use 1-6 keys to pluck, Q-R for chords, A-K for riffs.");
   });
+
+  // Attempt auto-start camera immediately for instant experience
+  setTimeout(() => {
+    startAirGuitar();
+  }, 200);
 
   // =========================================================================
   // Gesture Handling & Tune Playback
@@ -323,38 +363,61 @@ document.addEventListener('DOMContentLoaded', () => {
     updateActiveTuneUI(gestureId, tune);
   }
 
+  // Chord Names mapped to gestures for clean HUD
+  const gestureChordNames = {
+    'rock_horns': 'E7',
+    'peace_sign': 'Gmaj7',
+    'open_palm': 'Am9',
+    'index_point': 'A7',
+    'closed_fist': 'E5',
+    'thumbs_up': 'D9',
+    'pinch_grip': 'Cmaj7',
+    'shaka_sign': 'Em'
+  };
+
+  const gestureSubtitles = {
+    'rock_horns': 'V7 • Heavy Lead',
+    'peace_sign': 'I • Acoustic Ballad',
+    'open_palm': 'iv • Flamenco Run',
+    'index_point': 'IV7 • Soulful Blues',
+    'closed_fist': 'I5 • Metal Power Chug',
+    'thumbs_up': 'VII9 • Funky Groove',
+    'pinch_grip': 'VI • Ambient Swell',
+    'shaka_sign': 'i • Surf Tremolo'
+  };
+
   function updateActiveTuneUI(gestureId, tune) {
     const meta = window.AirGuitarTunes.GESTURE_METADATA.find(m => m.id === gestureId);
     const gestureName = meta ? meta.name : 'Custom Gesture';
     const iconName = meta ? meta.icon : 'music';
 
-    detectedGestureName.textContent = gestureName;
-    if (statusGestureIcon) {
-      statusGestureIcon.setAttribute('data-lucide', iconName);
+    // Update Clean Center-Bottom Chord Display (Screenshot Style)
+    if (cleanChordTitle) {
+      cleanChordTitle.textContent = gestureChordNames[gestureId] || 'E7';
+      cleanChordTitle.classList.add('pulse');
+      setTimeout(() => cleanChordTitle.classList.remove('pulse'), 140);
     }
-    activeTuneName.textContent = tune.title;
+    if (cleanChordSub) {
+      cleanChordSub.textContent = gestureSubtitles[gestureId] || tune.title;
+    }
 
-    activeGestureIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
-    currentTuneTitle.textContent = tune.title;
-    currentTuneStyle.textContent = `${tune.genre} • ${tune.bpm} BPM`;
+    if (detectedGestureName) detectedGestureName.textContent = gestureName;
+    if (statusGestureIcon) statusGestureIcon.setAttribute('data-lucide', iconName);
+    if (activeTuneName) activeTuneName.textContent = tune.title;
+    if (activeGestureIcon) activeGestureIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
+    if (currentTuneTitle) currentTuneTitle.textContent = tune.title;
+    if (currentTuneStyle) currentTuneStyle.textContent = `${tune.genre} • ${tune.bpm} BPM`;
 
     // Highlight HUD Banner
-    hudGestureIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
-    hudGestureTitle.textContent = gestureName;
-    hudTuneSubtitle.textContent = `Playing: ${tune.title}`;
-    hudGestureBanner.classList.add('visible');
+    if (hudGestureIcon) hudGestureIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
+    if (hudGestureTitle) hudGestureTitle.textContent = gestureName;
+    if (hudTuneSubtitle) hudTuneSubtitle.textContent = `Playing: ${tune.title}`;
+    if (hudGestureBanner) hudGestureBanner.classList.add('visible');
 
-    // Sync Tone preset pill
-    if (tune.preferredTone) {
-      document.querySelectorAll('.tone-chip, .pill-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.preset === tune.preferredTone);
-      });
+    // Sync Tone preset selector
+    if (tune.preferredTone && quickToneSelect) {
+      quickToneSelect.value = tune.preferredTone;
     }
-
-    // Highlight active row in sidebar
-    document.querySelectorAll('.gesture-tune-row').forEach(row => {
-      row.classList.toggle('active', row.dataset.gestureId === gestureId);
-    });
 
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
@@ -362,16 +425,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetActiveTuneUI() {
-    detectedGestureName.textContent = "Show Hand";
-    if (statusGestureIcon) {
-      statusGestureIcon.setAttribute('data-lucide', 'hand');
-    }
-    activeTuneName.textContent = "Idle";
-    activeGestureIcon.innerHTML = `<i data-lucide="music"></i>`;
-    currentTuneTitle.textContent = "Ready to Play";
-    currentTuneStyle.textContent = "Show a hand gesture or press hotkeys to play";
-    hudGestureBanner.classList.remove('visible');
-    document.querySelectorAll('.gesture-tune-row').forEach(row => row.classList.remove('active'));
+    if (cleanChordTitle) cleanChordTitle.textContent = "E7";
+    if (cleanChordSub) cleanChordSub.textContent = "V7";
+    if (detectedGestureName) detectedGestureName.textContent = "Show Hand";
+    if (statusGestureIcon) statusGestureIcon.setAttribute('data-lucide', 'hand');
+    if (activeTuneName) activeTuneName.textContent = "Idle";
+    if (activeGestureIcon) activeGestureIcon.innerHTML = `<i data-lucide="music"></i>`;
+    if (currentTuneTitle) currentTuneTitle.textContent = "Ready to Play";
+    if (currentTuneStyle) currentTuneStyle.textContent = "Show a hand gesture or press hotkeys to play";
+    if (hudGestureBanner) hudGestureBanner.classList.remove('visible');
 
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
@@ -379,6 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Tracker Callbacks
+  let lastPitchText = '';
+  let lastWahText = '';
+
   tracker.onGestureDetected = (gesture) => {
     if (gesture !== 'none') {
       playGestureTune(gesture);
@@ -390,36 +455,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const semitones = audio.setPitchModulation(point.x);
     const cutoff = audio.setWahModulation(point.y);
 
-    // Update Modulation Bars in UI
-    const pitchPct = Math.round(((semitones + 6) / 13) * 100);
-    pitchModBar.style.width = `${pitchPct}%`;
-    pitchModVal.textContent = `${semitones > 0 ? '+' : ''}${semitones} st`;
+    // Update Modulation Bars in UI without redundant DOM repaints
+    const pitchStr = `${semitones > 0 ? '+' : ''}${semitones} st`;
+    if (pitchStr !== lastPitchText) {
+      lastPitchText = pitchStr;
+      if (pitchModBar) {
+        const pitchPct = Math.round(((semitones + 6) / 13) * 100);
+        pitchModBar.style.width = `${pitchPct}%`;
+      }
+      if (pitchModVal) pitchModVal.textContent = pitchStr;
 
-    const wahPct = Math.round(((cutoff - 250) / 7250) * 100);
-    wahModBar.style.width = `${wahPct}%`;
-    wahModVal.textContent = `${(cutoff / 1000).toFixed(1)} kHz`;
+      const keyLabels = ['B Standard', 'C Standard', 'C# Standard', 'D Standard', 'D# Standard', 'E Standard', 'F Standard', 'F# Standard', 'G Standard', 'G# Standard', 'A Standard', 'A# Standard', 'B High', 'C High'];
+      if (tuneKeyDisplay) tuneKeyDisplay.textContent = `Key: ${keyLabels[semitones + 5] || 'E Standard'}`;
+    }
 
-    // Update key badge
-    const keyLabels = ['B Standard', 'C Standard', 'C# Standard', 'D Standard', 'D# Standard', 'E Standard', 'F Standard', 'F# Standard', 'G Standard', 'G# Standard', 'A Standard', 'A# Standard', 'B High', 'C High'];
-    tuneKeyDisplay.textContent = `Key: ${keyLabels[semitones + 5] || 'E Standard'}`;
+    const wahStr = `${(cutoff / 1000).toFixed(1)} kHz`;
+    if (wahStr !== lastWahText) {
+      lastWahText = wahStr;
+      if (wahModBar) {
+        const wahPct = Math.round(((cutoff - 250) / 7250) * 100);
+        wahModBar.style.width = `${wahPct}%`;
+      }
+      if (wahModVal) wahModVal.textContent = wahStr;
+    }
   };
 
   // Note Trigger visualizer callback (string vibration + fret highlight)
   audio.onNoteTrigger = (noteEvent) => {
     visualizer.triggerNoteVisual(noteEvent.string - 1, noteEvent.fret);
-
-    // Light up matching fret node in HUD
-    const fretNode = document.querySelector(`.fret-node[data-fret="${noteEvent.fret}"]`);
-    if (fretNode) {
-      fretNode.classList.add('active');
-      setTimeout(() => fretNode.classList.remove('active'), 140);
+    if (cleanChordTitle) {
+      cleanChordTitle.classList.add('pulse');
+      setTimeout(() => cleanChordTitle.classList.remove('pulse'), 100);
     }
   };
 
   // Main Visualizer Animation Frame Loop & FPS calculation
   let currentLandmarks = null;
   let currentPoint = null;
-  let lastFrameTime = performance.now();
   let frameCount = 0;
   let fpsTimer = performance.now();
 
@@ -438,10 +510,26 @@ document.addEventListener('DOMContentLoaded', () => {
       fpsTimer = now;
     }
 
+    // Dynamic Top-Right VU Meter update (Screenshot Style)
+    if (audio && audio.analyser && vuBars.length > 0) {
+      const buffer = new Uint8Array(audio.analyser.frequencyBinCount);
+      audio.analyser.getByteFrequencyData(buffer);
+      let sum = 0;
+      for (let i = 0; i < buffer.length; i++) sum += buffer[i];
+      const avg = sum / buffer.length;
+      const level = Math.min(1, (avg / 100) * (audio.isPlayingTune ? 1.3 : 1.0));
+      const activeCount = Math.round(level * vuBars.length);
+      for (let i = 0; i < vuBars.length; i++) {
+        vuBars[i].classList.toggle('active', i < activeCount);
+        vuBars[i].classList.toggle('peak', i >= vuBars.length - 2 && i < activeCount);
+      }
+    }
+
     visualizer.render(video, currentLandmarks, currentPoint, audio.isPlayingTune);
     requestAnimationFrame(renderLoop);
   }
   requestAnimationFrame(renderLoop);
+
 
   // =========================================================================
   // Studio Lossless WAV Recorder Controls

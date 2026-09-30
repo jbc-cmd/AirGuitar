@@ -9,17 +9,18 @@ class AirGuitarHandTracker {
     this.hands = null;
     this.camera = null;
     this.isTracking = false;
-    this.smoothingFactor = 0.6; // EMA filter
+    this.isProcessing = false; // Concurrency guard to prevent frame queue backpressure
+    this.smoothingFactor = 0.25; // Responsive low-latency EMA filter
 
     // Smoothed primary hand point (X, Y)
     this.smoothedPoint = { x: 0.5, y: 0.5, z: 0 };
     this.rawPoint = { x: 0.5, y: 0.5, z: 0 };
 
-    // Gesture detection stability debounce
+    // Gesture detection stability debounce (fast 50ms response)
     this.currentGesture = 'none';
     this.candidateGesture = 'none';
     this.gestureHoldStartTime = 0;
-    this.debounceMs = 150;
+    this.debounceMs = 50;
 
     // Callbacks
     this.onGestureDetected = null;
@@ -41,15 +42,16 @@ class AirGuitarHandTracker {
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
       });
 
+      // Ultra low-latency settings with dual-hand tracking
       this.hands.setOptions({
         maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.6,
-        minTrackingConfidence: 0.6
+        modelComplexity: 0,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
       });
 
       this.hands.onResults((results) => this.handleResults(results));
-      console.log("MediaPipe Hands initialized.");
+      console.log("MediaPipe Hands initialized in high-performance dual-hand mode.");
       return true;
     } catch (err) {
       console.error("Failed to initialize MediaPipe Hands:", err);
@@ -61,28 +63,22 @@ class AirGuitarHandTracker {
     if (!this.videoElement) return false;
 
     try {
-      if (typeof Camera !== 'undefined') {
-        this.camera = new Camera(this.videoElement, {
-          onFrame: async () => {
-            if (this.hands && this.isTracking) {
-              await this.hands.send({ image: this.videoElement });
-            }
-          },
-          width: 1280,
-          height: 720
-        });
-        await this.camera.start();
-      } else {
-        // Standard WebRTC fallback
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720, facingMode: 'user' }
-        });
-        this.videoElement.srcObject = stream;
-        await this.videoElement.play();
-        this.startManualLoop();
-      }
-
+      // 1. Start native WebRTC camera immediately (instant video feed)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: false
+      });
+      this.videoElement.srcObject = stream;
+      await this.videoElement.play();
       this.isTracking = true;
+
+      // 2. Start continuous processing loop
+      this.startProcessingLoop();
+
       if (this.onTrackingStatus) this.onTrackingStatus(true, "Camera Live");
       return true;
     } catch (err) {
@@ -92,18 +88,31 @@ class AirGuitarHandTracker {
     }
   }
 
-  startManualLoop() {
+  startProcessingLoop() {
     const process = async () => {
-      if (this.isTracking && this.hands && this.videoElement.readyState >= 2) {
-        await this.hands.send({ image: this.videoElement });
+      if (!this.isTracking) return;
+
+      if (this.hands && this.videoElement && (this.videoElement.readyState >= 2 || this.videoElement.currentTime > 0) && !this.isProcessing) {
+        this.isProcessing = true;
+        try {
+          await this.hands.send({ image: this.videoElement });
+        } catch (e) {
+          // Ignore occasional dropped frame
+        } finally {
+          this.isProcessing = false;
+        }
       }
-      if (this.isTracking) requestAnimationFrame(process);
+
+      if (this.isTracking) {
+        requestAnimationFrame(process);
+      }
     };
     requestAnimationFrame(process);
   }
 
   stopCamera() {
     this.isTracking = false;
+    this.isProcessing = false;
     if (this.camera && this.camera.stop) {
       this.camera.stop();
     }
@@ -151,12 +160,15 @@ class AirGuitarHandTracker {
       this.onHandMove(this.smoothedPoint, this.rawPoint);
     }
 
-    // 2. Classify Gesture
-    const detected = this.classifyGesture(landmarks);
+    // 2. Classify Gesture from primary or secondary hand
+    let detected = this.classifyGesture(landmarks);
+    if (detected === 'none' && results.multiHandLandmarks.length > 1) {
+      detected = this.classifyGesture(results.multiHandLandmarks[1]);
+    }
     this.debounceGesture(detected);
 
     if (this.onFrameLandmarks) {
-      this.onFrameLandmarks(results, landmarks, this.smoothedPoint);
+      this.onFrameLandmarks(results, results.multiHandLandmarks, this.smoothedPoint);
     }
   }
 
