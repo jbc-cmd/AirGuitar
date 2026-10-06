@@ -1,5 +1,5 @@
 # 🎸 AirGuitar AI — Vision-Powered Gesture Virtual Instrument & Studio
-(Day 20).....
+(Day 21)....
 
 An interactive, ultra-modern virtual air guitar and digital audio workstation powered by real-time computer vision AI (MediaPipe Hands) and Web Audio API physical string synthesis. Make hand gestures in the air to trigger and continuously loop studio-grade guitar riffs, solos, arpeggios, and grooves while modulating pitch and wah-wah filter in 3D/2D space, or interact directly via canvas strumming and studio keyboard hotkeys!
 
